@@ -1,4 +1,5 @@
-import { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -23,6 +24,27 @@ export default function HomeScreen() {
   const [amountInput, setAmountInput] = useState("");
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
+
+  useEffect(() => {
+    async function loadPurchases() {
+      try {
+        const savedPurchases = await AsyncStorage.getItem(
+          PURCHASES_STORAGE_KEY,
+        );
+
+        if (savedPurchases !== null) {
+          const parsedPurchases: Purchase[] = JSON.parse(savedPurchases);
+          setPurchases(parsedPurchases);
+        }
+      } catch (error) {
+        console.log("Failed to load purchases:", error);
+      } finally {
+        setIsStorageLoaded(true);
+      }
+    }
+
+    loadPurchases();
+  }, []);
 
   const purchaseAmount = Number(amountInput);
   const isValidAmount = Number.isFinite(purchaseAmount) && purchaseAmount > 0;
