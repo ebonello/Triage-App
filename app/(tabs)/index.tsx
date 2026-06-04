@@ -46,6 +46,31 @@ export default function HomeScreen() {
     loadPurchases();
   }, []);
 
+  useEffect(() => {
+    if (!isStorageLoaded) {
+      return;
+    }
+
+    async function savePurchases() {
+      try {
+        const purchasesAsString = JSON.stringify(purchases);
+        await AsyncStorage.setItem(PURCHASES_STORAGE_KEY, purchasesAsString);
+      } catch (error) {
+        console.log("Failed to save purchases:", error);
+      }
+    }
+
+    savePurchases();
+  }, [purchases, isStorageLoaded]);
+
+  if (isStorageLoaded === false) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading Triage...</Text>
+      </View>
+    );
+  }
+
   const purchaseAmount = Number(amountInput);
   const isValidAmount = Number.isFinite(purchaseAmount) && purchaseAmount > 0;
   const isInvalidAmount = !isValidAmount;
@@ -170,6 +195,20 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#050505",
+  },
+
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#050505",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+
+  loadingText: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "600",
   },
 
   scrollContent: {
