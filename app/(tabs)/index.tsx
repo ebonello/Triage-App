@@ -12,19 +12,24 @@ import {
   View,
 } from "react-native";
 
+//Custom type for purchases array of Purchase objects
 type Purchase = {
   id: string;
   amount: number;
   createdAt: string;
 };
 
+// Purchase key in order to use AsnycStorage
 const PURCHASES_STORAGE_KEY = "triage:purchases";
 
+//Main Function that re-renders the screen when one of the state functions is called
 export default function HomeScreen() {
   const [amountInput, setAmountInput] = useState("");
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
 
+  // useEffect runs AFTER the component renders.
+  // This useEffect loads saved purchases from phone storage when the HomeScreen first opens.
   useEffect(() => {
     async function loadPurchases() {
       try {
@@ -46,6 +51,9 @@ export default function HomeScreen() {
     loadPurchases();
   }, []);
 
+  /*This useEffect checks is used to save Purchases to local storage
+    but first checks to see if the storage first loaded from local memory
+    so that it doesnt overwrite the saved storage with empty array before load*/
   useEffect(() => {
     if (!isStorageLoaded) {
       return;
@@ -63,6 +71,8 @@ export default function HomeScreen() {
     savePurchases();
   }, [purchases, isStorageLoaded]);
 
+  //This simply checks to see if storage is laoded so it can display a loading
+  //when async function is grabbing data.
   if (isStorageLoaded === false) {
     return (
       <View style={styles.loadingContainer}>
@@ -71,14 +81,25 @@ export default function HomeScreen() {
     );
   }
 
+  //Const declaration to turn amountInput string into number and set it to purchaseAmount
   const purchaseAmount = Number(amountInput);
+  //Checks toi make sure purchaseAmount is valid number
   const isValidAmount = Number.isFinite(purchaseAmount) && purchaseAmount > 0;
+  //A const declaration to make later functions more descriptive and less symbolic
   const isInvalidAmount = !isValidAmount;
 
-  const spentToday = purchases.reduce((total, purchase) => {
+  // Create a new array of only today's purchases.
+  // filter() keeps a purchase only when isPurchaseFromToday(purchase) returns true.
+  const todaysPurchases = purchases.filter((purchase) => {
+    return isPurchaseFromToday(purchase);
+  });
+
+  //This function creates a running total of todays purchases and calls it "spentToday"
+  const spentToday = todaysPurchases.reduce((total, purchase) => {
     return total + purchase.amount;
   }, 0);
 
+  //Helper function to format number to currency for output to dashbaord past purchases list
   function formatCurrency(amount: number) {
     return amount.toLocaleString("en-US", {
       style: "currency",
@@ -86,31 +107,56 @@ export default function HomeScreen() {
     });
   }
 
+  //const used to hold properly formated total for display
   const formattedSpentToday = formatCurrency(spentToday);
 
+  //Helper function for todaysPurchases to determine which purchases match todays date
+  function isPurchaseFromToday(purchase: Purchase) {
+    const purchaseDate = new Date(purchase.createdAt);
+    const today = new Date();
+
+    return (
+      purchaseDate.getFullYear() === today.getFullYear() &&
+      purchaseDate.getMonth() === today.getMonth() &&
+      purchaseDate.getDate() === today.getDate()
+    );
+  }
+
+  //Main function for processing purchases submitted in UI
   function addPurchase() {
+    //checks to see if amount is valid, if not, stop
     if (isInvalidAmount) {
       return;
     }
 
+    /*Creating constant for a new purchasse of type "Purchase" with "amount" coming
+    from the field input submission.*/
     const newPurchase: Purchase = {
       id: Date.now().toString(),
       amount: purchaseAmount,
       createdAt: new Date().toISOString(),
     };
 
+    //Makes keyboard dissapear after submission
     Keyboard.dismiss();
 
+    /*This updates the state of the "purchase" array by creating a new array
+    with the new purchase added to the top of the previous array*/
     setPurchases((previousPurchases) => [newPurchase, ...previousPurchases]);
 
+    //This clears the UI input are after submission
     setAmountInput("");
   }
 
+  //Handles a total reset of the purchases array and clears it out
   function resetTotal() {
     Keyboard.dismiss();
     setAmountInput("");
     setPurchases([]);
   }
+
+  /*This triggers on button press to remove a specific purchase and create a new array
+  without the specific purchase that matches the id.*/
   function deletePurchase(purchaseId: string) {
     setPurchases((previousPurchases) =>
       previousPurchases.filter((purchase) => purchase.id !== purchaseId),
@@ -142,6 +188,12 @@ export default function HomeScreen() {
           <View style={styles.purchaseList}>
             <Text style={styles.sectionTitle}>Recent purchases</Text>
 
+            {/*
+    purchases is an array of purchase objects.
+
+    map() loops through every item in the purchases array.
+    Each item is temporarily named "purchase".*/}
+
             {purchases.map((purchase) => {
               return (
                 <View key={purchase.id} style={styles.purchaseItem}>
@@ -149,6 +201,16 @@ export default function HomeScreen() {
                     {formatCurrency(purchase.amount)}
                   </Text>
 
+                  {/*
+          This delete button is created inside the map() loop,
+          so it has access to the current purchase.
+
+          When pressed, it calls deletePurchase()
+          and passes in this specific purchase's id.
+
+          The arrow function prevents deletePurchase from running immediately.
+          It only runs later, when the user presses the button.
+        */}
                   <Pressable onPress={() => deletePurchase(purchase.id)}>
                     <Text style={styles.deleteText}>Delete</Text>
                   </Pressable>
