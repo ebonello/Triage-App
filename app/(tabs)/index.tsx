@@ -6,17 +6,18 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 
 //Custom type for purchases array of Purchase objects
 type Purchase = {
   id: string;
   amount: number;
   createdAt: string;
+  description: string;
 };
 
 // Purchase key in order to use AsnycStorage
@@ -25,6 +26,7 @@ const PURCHASES_STORAGE_KEY = "triage:purchases";
 //Main Function that re-renders the screen when one of the state functions is called
 export default function HomeScreen() {
   const [amountInput, setAmountInput] = useState("");
+  const [descriptionInput, setDescriptionInput] = useState("");
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
 
@@ -81,12 +83,14 @@ export default function HomeScreen() {
     );
   }
 
-  //Const declaration to turn amountInput string into number and set it to purchaseAmount
+  //Const declaration to turn string value from form and turn it into number
   const purchaseAmount = Number(amountInput);
-  //Checks toi make sure purchaseAmount is valid number
+  //Checks to make sure purchaseAmount is valid number
   const isValidAmount = Number.isFinite(purchaseAmount) && purchaseAmount > 0;
-  //A const declaration to make later functions more descriptive and less symbolic
-  const isInvalidAmount = !isValidAmount;
+  const descrTxt = descriptionInput.trim();
+  const isValidDescr = descrTxt.length > 0 && descrTxt.length < 26;
+  const canAddPurchase = isValidAmount && isValidDescr;
+  const cannotAddPurchase = !canAddPurchase;
 
   // Create a new array of only today's purchases.
   // filter() keeps a purchase only when isPurchaseFromToday(purchase) returns true.
@@ -125,16 +129,17 @@ export default function HomeScreen() {
   //Main function for processing purchases submitted in UI
   function addPurchase() {
     //checks to see if amount is valid, if not, stop
-    if (isInvalidAmount) {
+    if (cannotAddPurchase) {
       return;
     }
 
-    /*Creating constant for a new purchasse of type "Purchase" with "amount" coming
+    /*Creating constant for a new purchase of type "Purchase" with "amount" coming
     from the field input submission.*/
     const newPurchase: Purchase = {
       id: Date.now().toString(),
       amount: purchaseAmount,
       createdAt: new Date().toISOString(),
+      description: descrTxt,
     };
 
     //Makes keyboard dissapear after submission
@@ -146,12 +151,14 @@ export default function HomeScreen() {
 
     //This clears the UI input are after submission
     setAmountInput("");
+    setDescriptionInput("");
   }
 
   //Handles a total reset of the purchases array and clears it out
   function resetTotal() {
     Keyboard.dismiss();
     setAmountInput("");
+    setDescriptionInput("");
     setPurchases([]);
   }
 
@@ -181,26 +188,27 @@ export default function HomeScreen() {
 
           <Text style={styles.caption}>Spent today</Text>
 
-          <Text style={styles.caption}>
+          {/* <Text style={styles.caption}>
             Purchases logged: {purchases.length}
-          </Text>
+          </Text> */}
 
           <View style={styles.purchaseList}>
-            <Text style={styles.sectionTitle}>Recent purchases</Text>
+            <Text style={styles.sectionTitle}>Recent Purchases:</Text>
 
             {/*
-    purchases is an array of purchase objects.
+    map() loops through every item in the todaysPurchases array and creates 
+    a new array and each item in the array it creates a new view and 
+    displays it on screen with a button*/}
 
-    map() loops through every item in the purchases array.
-    Each item is temporarily named "purchase".*/}
-
-            {purchases.map((purchase) => {
+            {todaysPurchases.map((purchase) => {
               return (
                 <View key={purchase.id} style={styles.purchaseItem}>
                   <Text style={styles.purchaseAmount}>
                     {formatCurrency(purchase.amount)}
                   </Text>
-
+                  <Text style={styles.purchaseAmount}>
+                    {purchase.description}
+                  </Text>
                   {/*
           This delete button is created inside the map() loop,
           so it has access to the current purchase.
@@ -221,6 +229,7 @@ export default function HomeScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>Purchase amount</Text>
 
+            {/*Input for amount*/}
             <TextInput
               style={styles.input}
               value={amountInput}
@@ -231,15 +240,28 @@ export default function HomeScreen() {
               returnKeyType="done"
               onSubmitEditing={addPurchase}
             />
+            <Text style={styles.inputLabel}>Description</Text>
+
+            {/*Input for description*/}
+            <TextInput
+              style={styles.input}
+              value={descriptionInput}
+              onChangeText={setDescriptionInput}
+              placeholder="Example: Coffee"
+              placeholderTextColor="#777777"
+              returnKeyType="done"
+              onSubmitEditing={addPurchase}
+            />
           </View>
 
+          {/* If cannotAddPurchase is true, apply the disabled button style */}
           <Pressable
             style={[
               styles.primaryButton,
-              isInvalidAmount && styles.disabledButton,
+              cannotAddPurchase && styles.disabledButton,
             ]}
             onPress={addPurchase}
-            disabled={isInvalidAmount}
+            disabled={cannotAddPurchase}
           >
             <Text style={styles.primaryButtonText}>Add Purchase</Text>
           </Pressable>
@@ -252,146 +274,3 @@ export default function HomeScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#050505",
-  },
-
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: "#050505",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-
-  loadingText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-
-  scrollContent: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#050505",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  appName: {
-    color: "#ffffff",
-    fontSize: 36,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  subtitle: {
-    color: "#cfcfcf",
-    fontSize: 18,
-    textAlign: "center",
-    marginBottom: 40,
-  },
-  amount: {
-    color: "#ffffff",
-    fontSize: 64,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-  caption: {
-    color: "#a8a8a8",
-    fontSize: 18,
-    marginBottom: 40,
-  },
-
-  purchaseList: {
-    width: "100%",
-    maxWidth: 320,
-    marginBottom: 24,
-  },
-
-  sectionTitle: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-
-  purchaseItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomColor: "#222222",
-    borderBottomWidth: 1,
-  },
-
-  purchaseAmount: {
-    color: "#cfcfcf",
-    fontSize: 16,
-  },
-
-  deleteText: {
-    color: "#ff6b6b",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  inputWrapper: {
-    width: "100%",
-    maxWidth: 320,
-    marginBottom: 18,
-  },
-  inputLabel: {
-    color: "#a8a8a8",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#151515",
-    color: "#ffffff",
-    borderColor: "#333333",
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    fontSize: 20,
-    width: "100%",
-  },
-  primaryButton: {
-    backgroundColor: "#ffffff",
-    paddingVertical: 16,
-    paddingHorizontal: 28,
-    borderRadius: 999,
-    marginBottom: 14,
-    width: "100%",
-    maxWidth: 320,
-    alignItems: "center",
-  },
-  disabledButton: {
-    opacity: 0.35,
-  },
-  primaryButtonText: {
-    color: "#050505",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  secondaryButton: {
-    borderColor: "#555555",
-    borderWidth: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 999,
-    width: "100%",
-    maxWidth: 320,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
