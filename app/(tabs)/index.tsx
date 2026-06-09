@@ -22,6 +22,7 @@ type Purchase = {
 
 // Purchase key in order to use AsnycStorage
 const PURCHASES_STORAGE_KEY = "triage:purchases";
+const MAX_DESCRIPTION_LENGTH = 25;
 
 //Main Function that re-renders the screen when one of the state functions is called
 export default function HomeScreen() {
@@ -88,7 +89,9 @@ export default function HomeScreen() {
   //Checks to make sure purchaseAmount is valid number
   const isValidAmount = Number.isFinite(purchaseAmount) && purchaseAmount > 0;
   const descrTxt = descriptionInput.trim();
-  const isValidDescr = descrTxt.length > 0 && descrTxt.length < 26;
+  const descrCharacterCount = descriptionInput.length;
+  const isValidDescr =
+    descrTxt.length > 0 && descrTxt.length <= MAX_DESCRIPTION_LENGTH;
   const canAddPurchase = isValidAmount && isValidDescr;
   const cannotAddPurchase = !canAddPurchase;
 
@@ -251,7 +254,11 @@ export default function HomeScreen() {
               placeholderTextColor="#777777"
               returnKeyType="done"
               onSubmitEditing={addPurchase}
+              maxLength={MAX_DESCRIPTION_LENGTH}
             />
+            <Text style={styles.characterCount}>
+              {descrCharacterCount} / {MAX_DESCRIPTION_LENGTH}
+            </Text>
           </View>
 
           {/* If cannotAddPurchase is true, apply the disabled button style */}

@@ -98,6 +98,12 @@ export const homeScreenStyles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 8,
   },
+  characterCount: {
+    color: "#777777",
+    fontSize: 12,
+    textAlign: "right",
+    marginTop: 6,
+  },
   input: {
     backgroundColor: "#151515",
     color: "#ffffff",
