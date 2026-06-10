@@ -12,70 +12,142 @@ import {
 } from "react-native";
 import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 
-//Custom type for purchases array of Purchase objects
-type Purchase = {
+/*
+  Custom type for the app's local spending ledger.
+
+  This used to be called Purchase, but SpendingEntry is broader.
+  Eventually, one SpendingEntry can come from either:
+  - a manual user entry
+  - an imported bank transaction
+*/
+type SpendingEntry = {
   id: string;
+
+  // Union type: source can only be "manual" or "bank"
+  source: "manual" | "bank";
+
   amount: number;
-  createdAt: string;
   description: string;
+
+  /*
+    spentAt = when the purchase/spending actually happened.
+    This is what we use for daily totals, history, weekly totals, etc.
+  */
+  spentAt: string;
+
+  /*
+    createdAt = when this record was created inside the app.
+    For manual entries, this is usually the same as spentAt.
+    For bank imports later, this may be later than spentAt.
+  */
+  createdAt: string;
 };
 
-// Purchase key in order to use AsnycStorage
-const PURCHASES_STORAGE_KEY = "triage:purchases";
+// Storage key used by AsyncStorage to save the local ledger on the phone
+const SPENDING_ENTRIES_STORAGE_KEY = "triage:spendingEntries";
+
+// Max number of characters allowed in the description input
 const MAX_DESCRIPTION_LENGTH = 25;
 
-//Main Function that re-renders the screen when one of the state functions is called
+// Main screen component. This re-renders whenever one of its state setters is called.
 export default function HomeScreen() {
+  // Holds the raw text typed into the amount input
   const [amountInput, setAmountInput] = useState("");
+
+  // Holds the raw text typed into the description input
   const [descriptionInput, setDescriptionInput] = useState("");
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
+
+  // Main local ledger array. This replaces the old purchases array.
+  const [spendingEntries, setSpendingEntries] = useState<SpendingEntry[]>([]);
+
+  // Tracks whether AsyncStorage has finished loading saved data
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
 
-  // useEffect runs AFTER the component renders.
-  // This useEffect loads saved purchases from phone storage when the HomeScreen first opens.
+  /*
+    useEffect runs AFTER the component renders.
+
+    This useEffect loads saved spending entries from phone storage
+    when the HomeScreen first opens.
+  */
   useEffect(() => {
-    async function loadPurchases() {
+    async function loadSpendingEntries() {
       try {
-        const savedPurchases = await AsyncStorage.getItem(
-          PURCHASES_STORAGE_KEY,
+        const savedSpendingEntries = await AsyncStorage.getItem(
+          SPENDING_ENTRIES_STORAGE_KEY,
         );
 
-        if (savedPurchases !== null) {
-          const parsedPurchases: Purchase[] = JSON.parse(savedPurchases);
-          setPurchases(parsedPurchases);
+        /*
+          AsyncStorage stores data as strings.
+
+          If savedSpendingEntries is not null, that means there was
+          previously saved data. We parse it back into an array.
+        */
+        if (savedSpendingEntries !== null) {
+          const parsedSpendingEntries: SpendingEntry[] =
+            JSON.parse(savedSpendingEntries);
+
+          setSpendingEntries(parsedSpendingEntries);
         }
       } catch (error) {
-        console.log("Failed to load purchases:", error);
+        console.log("Failed to load spending entries:", error);
       } finally {
+        /*
+          This runs whether the load succeeds or fails.
+
+          It tells the app:
+          "We are done trying to load storage, so it is safe to render
+          the real screen and safe to start saving future changes."
+        */
         setIsStorageLoaded(true);
       }
     }
 
-    loadPurchases();
+    loadSpendingEntries();
   }, []);
 
-  /*This useEffect checks is used to save Purchases to local storage
-    but first checks to see if the storage first loaded from local memory
-    so that it doesnt overwrite the saved storage with empty array before load*/
+  /*
+    This useEffect saves spendingEntries to local phone storage.
+
+    It runs whenever spendingEntries changes, but only after
+    the first storage load has completed.
+  */
   useEffect(() => {
-    if (!isStorageLoaded) {
+    /*
+      If storage has not loaded yet, stop.
+
+      This prevents the app from accidentally saving an empty array
+      before it has had a chance to load the saved data.
+    */
+    if (isStorageLoaded === false) {
       return;
     }
 
-    async function savePurchases() {
+    async function saveSpendingEntries() {
       try {
-        const purchasesAsString = JSON.stringify(purchases);
-        await AsyncStorage.setItem(PURCHASES_STORAGE_KEY, purchasesAsString);
+        /*
+          AsyncStorage can only store strings.
+
+          JSON.stringify converts the spendingEntries array into a string.
+        */
+        const spendingEntriesAsString = JSON.stringify(spendingEntries);
+
+        await AsyncStorage.setItem(
+          SPENDING_ENTRIES_STORAGE_KEY,
+          spendingEntriesAsString,
+        );
       } catch (error) {
-        console.log("Failed to save purchases:", error);
+        console.log("Failed to save spending entries:", error);
       }
     }
 
-    savePurchases();
-  }, [purchases, isStorageLoaded]);
+    saveSpendingEntries();
+  }, [spendingEntries, isStorageLoaded]);
 
-  //This simply checks to see if storage is laoded so it can display a loading
-  //when async function is grabbing data.
+  /*
+    Show a loading screen while AsyncStorage is checking for saved data.
+
+    This prevents the main UI from briefly rendering with empty data.
+  */
   if (isStorageLoaded === false) {
     return (
       <View style={styles.loadingContainer}>
@@ -84,29 +156,77 @@ export default function HomeScreen() {
     );
   }
 
-  //Const declaration to turn string value from form and turn it into number
-  const purchaseAmount = Number(amountInput);
-  //Checks to make sure purchaseAmount is valid number
-  const isValidAmount = Number.isFinite(purchaseAmount) && purchaseAmount > 0;
-  const descrTxt = descriptionInput.trim();
-  const descrCharacterCount = descriptionInput.length;
-  const isValidDescr =
-    descrTxt.length > 0 && descrTxt.length <= MAX_DESCRIPTION_LENGTH;
-  const canAddPurchase = isValidAmount && isValidDescr;
-  const cannotAddPurchase = !canAddPurchase;
+  /*
+    Convert the amount input from a string into a number.
 
-  // Create a new array of only today's purchases.
-  // filter() keeps a purchase only when isPurchaseFromToday(purchase) returns true.
-  const todaysPurchases = purchases.filter((purchase) => {
-    return isPurchaseFromToday(purchase);
+    TextInput always gives us text, so "12.50" needs to become 12.5
+    before we can use it in math.
+  */
+  const spendingAmount = Number(amountInput);
+
+  // Validate that the amount is a real number and greater than zero
+  const isValidAmount = Number.isFinite(spendingAmount) && spendingAmount > 0;
+
+  /*
+    Trim the description so spaces at the beginning/end do not count.
+
+    Example:
+    " Coffee " becomes "Coffee"
+    "     " becomes ""
+  */
+  const descriptionText = descriptionInput.trim();
+
+  // Counts the characters currently typed into the description input
+  const descriptionCharacterCount = descriptionInput.length;
+
+  /*
+    Description is valid only if:
+    - trimmed text has at least 1 character
+    - raw input does not exceed the max length
+  */
+  const isValidDescription =
+    descriptionText.length > 0 &&
+    descriptionCharacterCount <= MAX_DESCRIPTION_LENGTH;
+
+  /*
+    Combined form validation.
+
+    The user can only add a spending entry if both fields are valid.
+  */
+  const canAddSpendingEntry = isValidAmount && isValidDescription;
+
+  // More readable inverse used by the button disabled logic
+  const cannotAddSpendingEntry = !canAddSpendingEntry;
+
+  /*
+    Create a new array of only today's spending entries.
+
+    spendingEntries = full local ledger
+    todaysSpendingEntries = only entries where spentAt is today
+  */
+  const todaysSpendingEntries = spendingEntries.filter((spendingEntry) => {
+    return isSpendingEntryFromToday(spendingEntry);
   });
 
-  //This function creates a running total of todays purchases and calls it "spentToday"
-  const spentToday = todaysPurchases.reduce((total, purchase) => {
-    return total + purchase.amount;
+  /*
+    Calculate today's running total.
+
+    reduce() turns the todaysSpendingEntries array into one number.
+    It starts at 0, then adds each spendingEntry.amount.
+  */
+  const spentToday = todaysSpendingEntries.reduce((total, spendingEntry) => {
+    return total + spendingEntry.amount;
   }, 0);
 
-  //Helper function to format number to currency for output to dashbaord past purchases list
+  // Format the running total for display in the UI
+  const formattedSpentToday = formatCurrency(spentToday);
+
+  /*
+    Helper function to format a number as US currency.
+
+    Example:
+    12.5 becomes "$12.50"
+  */
   function formatCurrency(amount: number) {
     return amount.toLocaleString("en-US", {
       style: "currency",
@@ -114,62 +234,103 @@ export default function HomeScreen() {
     });
   }
 
-  //const used to hold properly formated total for display
-  const formattedSpentToday = formatCurrency(spentToday);
+  /*
+    Helper function that checks whether a spending entry belongs to today.
 
-  //Helper function for todaysPurchases to determine which purchases match todays date
-  function isPurchaseFromToday(purchase: Purchase) {
-    const purchaseDate = new Date(purchase.createdAt);
+    Important:
+    We use spentAt, not createdAt.
+
+    spentAt = when the spending actually happened
+    createdAt = when the record was created in the app
+  */
+  function isSpendingEntryFromToday(spendingEntry: SpendingEntry) {
+    const spentDate = new Date(spendingEntry.spentAt);
     const today = new Date();
 
     return (
-      purchaseDate.getFullYear() === today.getFullYear() &&
-      purchaseDate.getMonth() === today.getMonth() &&
-      purchaseDate.getDate() === today.getDate()
+      spentDate.getFullYear() === today.getFullYear() &&
+      spentDate.getMonth() === today.getMonth() &&
+      spentDate.getDate() === today.getDate()
     );
   }
 
-  //Main function for processing purchases submitted in UI
-  function addPurchase() {
-    //checks to see if amount is valid, if not, stop
-    if (cannotAddPurchase) {
+  /*
+    Main function for manually adding a spending entry from the UI.
+
+    This is still called when the user presses "Add Purchase",
+    but internally we now store it as a SpendingEntry.
+  */
+  function addManualSpendingEntry() {
+    // If either the amount or description is invalid, stop the function
+    if (cannotAddSpendingEntry) {
       return;
     }
 
-    /*Creating constant for a new purchase of type "Purchase" with "amount" coming
-    from the field input submission.*/
-    const newPurchase: Purchase = {
+    /*
+      For now, manual entries happen "right now."
+
+      So spentAt and createdAt are the same timestamp.
+      Later, we can allow the user to choose a past date.
+    */
+    const now = new Date().toISOString();
+
+    /*
+      Create a new spending entry object.
+
+      source: "manual" tells the app this was typed by the user,
+      not imported from a bank.
+    */
+    const newSpendingEntry: SpendingEntry = {
       id: Date.now().toString(),
-      amount: purchaseAmount,
-      createdAt: new Date().toISOString(),
-      description: descrTxt,
+      source: "manual",
+      amount: spendingAmount,
+      description: descriptionText,
+      spentAt: now,
+      createdAt: now,
     };
 
-    //Makes keyboard dissapear after submission
+    // Hide the keyboard after submitting
     Keyboard.dismiss();
 
-    /*This updates the state of the "purchase" array by creating a new array
-    with the new purchase added to the top of the previous array*/
-    setPurchases((previousPurchases) => [newPurchase, ...previousPurchases]);
+    /*
+      Update the local ledger.
 
-    //This clears the UI input are after submission
+      This creates a new array with the newest entry at the top,
+      followed by all previous entries.
+    */
+    setSpendingEntries((previousSpendingEntries) => [
+      newSpendingEntry,
+      ...previousSpendingEntries,
+    ]);
+
+    // Clear both input fields after the spending entry is added
     setAmountInput("");
     setDescriptionInput("");
   }
 
-  //Handles a total reset of the purchases array and clears it out
+  /*
+    Resets the local ledger and clears the input fields.
+
+    Later, we may move this somewhere harder to accidentally press.
+  */
   function resetTotal() {
     Keyboard.dismiss();
     setAmountInput("");
     setDescriptionInput("");
-    setPurchases([]);
+    setSpendingEntries([]);
   }
 
-  /*This triggers on button press to remove a specific purchase and create a new array
-  without the specific purchase that matches the id.*/
-  function deletePurchase(purchaseId: string) {
-    setPurchases((previousPurchases) =>
-      previousPurchases.filter((purchase) => purchase.id !== purchaseId),
+  /*
+    Deletes one spending entry by id.
+
+    filter() creates a new array that keeps every entry
+    except the one whose id matches spendingEntryId.
+  */
+  function deleteSpendingEntry(spendingEntryId: string) {
+    setSpendingEntries((previousSpendingEntries) =>
+      previousSpendingEntries.filter(
+        (spendingEntry) => spendingEntry.id !== spendingEntryId,
+      ),
     );
   }
 
@@ -191,48 +352,46 @@ export default function HomeScreen() {
 
           <Text style={styles.caption}>Spent today</Text>
 
-          {/* <Text style={styles.caption}>
-            Purchases logged: {purchases.length}
-          </Text> */}
-
           <View style={styles.purchaseList}>
-            <Text style={styles.sectionTitle}>Recent Purchases:</Text>
+            <Text style={styles.sectionTitle}>Recent Spending:</Text>
 
             {/*
-    map() loops through every item in the todaysPurchases array and creates 
-    a new array and each item in the array it creates a new view and 
-    displays it on screen with a button*/}
+              map() loops through every item in todaysSpendingEntries.
 
-            {todaysPurchases.map((purchase) => {
+              For each spendingEntry, it creates a visible row on screen.
+            */}
+            {todaysSpendingEntries.map((spendingEntry) => {
               return (
-                <View key={purchase.id} style={styles.purchaseItem}>
+                <View key={spendingEntry.id} style={styles.purchaseItem}>
                   <Text style={styles.purchaseAmount}>
-                    {formatCurrency(purchase.amount)}
+                    {formatCurrency(spendingEntry.amount)}
                   </Text>
+
                   <Text style={styles.purchaseAmount}>
-                    {purchase.description}
+                    {spendingEntry.description}
                   </Text>
+
                   {/*
-          This delete button is created inside the map() loop,
-          so it has access to the current purchase.
+                    This delete button is created inside the map() loop,
+                    so it has access to the current spendingEntry.
 
-          When pressed, it calls deletePurchase()
-          and passes in this specific purchase's id.
-
-          The arrow function prevents deletePurchase from running immediately.
-          It only runs later, when the user presses the button.
-        */}
-                  <Pressable onPress={() => deletePurchase(purchase.id)}>
+                    The arrow function prevents deleteSpendingEntry from
+                    running immediately. It only runs later, when pressed.
+                  */}
+                  <Pressable
+                    onPress={() => deleteSpendingEntry(spendingEntry.id)}
+                  >
                     <Text style={styles.deleteText}>Delete</Text>
                   </Pressable>
                 </View>
               );
             })}
           </View>
+
           <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>Purchase amount</Text>
 
-            {/*Input for amount*/}
+            {/* Input for amount */}
             <TextInput
               style={styles.input}
               value={amountInput}
@@ -241,11 +400,12 @@ export default function HomeScreen() {
               placeholderTextColor="#777777"
               keyboardType="decimal-pad"
               returnKeyType="done"
-              onSubmitEditing={addPurchase}
+              onSubmitEditing={addManualSpendingEntry}
             />
+
             <Text style={styles.inputLabel}>Description</Text>
 
-            {/*Input for description*/}
+            {/* Input for description */}
             <TextInput
               style={styles.input}
               value={descriptionInput}
@@ -253,22 +413,24 @@ export default function HomeScreen() {
               placeholder="Example: Coffee"
               placeholderTextColor="#777777"
               returnKeyType="done"
-              onSubmitEditing={addPurchase}
+              onSubmitEditing={addManualSpendingEntry}
               maxLength={MAX_DESCRIPTION_LENGTH}
             />
+
+            {/* Live character count for description input */}
             <Text style={styles.characterCount}>
-              {descrCharacterCount} / {MAX_DESCRIPTION_LENGTH}
+              {descriptionCharacterCount} / {MAX_DESCRIPTION_LENGTH}
             </Text>
           </View>
 
-          {/* If cannotAddPurchase is true, apply the disabled button style */}
+          {/* If cannotAddSpendingEntry is true, apply disabled styling */}
           <Pressable
             style={[
               styles.primaryButton,
-              cannotAddPurchase && styles.disabledButton,
+              cannotAddSpendingEntry && styles.disabledButton,
             ]}
-            onPress={addPurchase}
-            disabled={cannotAddPurchase}
+            onPress={addManualSpendingEntry}
+            disabled={cannotAddSpendingEntry}
           >
             <Text style={styles.primaryButtonText}>Add Purchase</Text>
           </Pressable>
