@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -11,37 +12,7 @@ import {
   View,
 } from "react-native";
 import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
-
-/*
-  Custom type for the app's local spending ledger.
-
-  This used to be called Purchase, but SpendingEntry is broader.
-  Eventually, one SpendingEntry can come from either:
-  - a manual user entry
-  - an imported bank transaction
-*/
-type SpendingEntry = {
-  id: string;
-
-  // Union type: source can only be "manual" or "bank"
-  source: "manual" | "bank";
-
-  amount: number;
-  description: string;
-
-  /*
-    spentAt = when the purchase/spending actually happened.
-    This is what we use for daily totals, history, weekly totals, etc.
-  */
-  spentAt: string;
-
-  /*
-    createdAt = when this record was created inside the app.
-    For manual entries, this is usually the same as spentAt.
-    For bank imports later, this may be later than spentAt.
-  */
-  createdAt: string;
-};
+import type { SpendingEntry } from "../../types/spendingEntry";
 
 // Storage key used by AsyncStorage to save the local ledger on the phone
 const SPENDING_ENTRIES_STORAGE_KEY = "triage:spendingEntries";
@@ -62,6 +33,8 @@ export default function HomeScreen() {
 
   // Tracks whether AsyncStorage has finished loading saved data
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
+  const [isAddPurchaseModalVisible, setIsAddPurchaseModalVisible] =
+    useState(false);
 
   /*
     useEffect runs AFTER the component renders.
@@ -266,20 +239,8 @@ export default function HomeScreen() {
       return;
     }
 
-    /*
-      For now, manual entries happen "right now."
-
-      So spentAt and createdAt are the same timestamp.
-      Later, we can allow the user to choose a past date.
-    */
     const now = new Date().toISOString();
 
-    /*
-      Create a new spending entry object.
-
-      source: "manual" tells the app this was typed by the user,
-      not imported from a bank.
-    */
     const newSpendingEntry: SpendingEntry = {
       id: Date.now().toString(),
       source: "manual",
@@ -289,12 +250,10 @@ export default function HomeScreen() {
       createdAt: now,
     };
 
-    // Hide the keyboard after submitting
     Keyboard.dismiss();
 
     /*
       Update the local ledger.
-
       This creates a new array with the newest entry at the top,
       followed by all previous entries.
     */
@@ -304,8 +263,7 @@ export default function HomeScreen() {
     ]);
 
     // Clear both input fields after the spending entry is added
-    setAmountInput("");
-    setDescriptionInput("");
+    closeAddPurchaseModal();
   }
 
   /*
@@ -334,11 +292,19 @@ export default function HomeScreen() {
     );
   }
 
+  function openAddPurchaseModal() {
+    setIsAddPurchaseModalVisible(true);
+  }
+
+  function closeAddPurchaseModal() {
+    Keyboard.dismiss();
+    setAmountInput("");
+    setDescriptionInput("");
+    setIsAddPurchaseModalVisible(false);
+  }
+
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -351,7 +317,12 @@ export default function HomeScreen() {
           <Text style={styles.amount}>{formattedSpentToday}</Text>
 
           <Text style={styles.caption}>Spent today</Text>
-
+          <Pressable
+            style={styles.primaryButton}
+            onPress={openAddPurchaseModal}
+          >
+            <Text style={styles.primaryButtonText}>+ Add Purchase</Text>
+          </Pressable>
           <View style={styles.purchaseList}>
             <Text style={styles.sectionTitle}>Recent Spending:</Text>
 
@@ -380,6 +351,7 @@ export default function HomeScreen() {
                   */}
                   <Pressable
                     onPress={() => deleteSpendingEntry(spendingEntry.id)}
+                    hitSlop={12}
                   >
                     <Text style={styles.deleteText}>Delete</Text>
                   </Pressable>
@@ -387,59 +359,74 @@ export default function HomeScreen() {
               );
             })}
           </View>
-
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Purchase amount</Text>
-
-            {/* Input for amount */}
-            <TextInput
-              style={styles.input}
-              value={amountInput}
-              onChangeText={setAmountInput}
-              placeholder="Example: 12.50"
-              placeholderTextColor="#777777"
-              keyboardType="decimal-pad"
-              returnKeyType="done"
-              onSubmitEditing={addManualSpendingEntry}
-            />
-
-            <Text style={styles.inputLabel}>Description</Text>
-
-            {/* Input for description */}
-            <TextInput
-              style={styles.input}
-              value={descriptionInput}
-              onChangeText={setDescriptionInput}
-              placeholder="Example: Coffee"
-              placeholderTextColor="#777777"
-              returnKeyType="done"
-              onSubmitEditing={addManualSpendingEntry}
-              maxLength={MAX_DESCRIPTION_LENGTH}
-            />
-
-            {/* Live character count for description input */}
-            <Text style={styles.characterCount}>
-              {descriptionCharacterCount} / {MAX_DESCRIPTION_LENGTH}
-            </Text>
-          </View>
-
-          {/* If cannotAddSpendingEntry is true, apply disabled styling */}
-          <Pressable
-            style={[
-              styles.primaryButton,
-              cannotAddSpendingEntry && styles.disabledButton,
-            ]}
-            onPress={addManualSpendingEntry}
-            disabled={cannotAddSpendingEntry}
-          >
-            <Text style={styles.primaryButtonText}>Add Purchase</Text>
-          </Pressable>
-
           <Pressable style={styles.secondaryButton} onPress={resetTotal}>
             <Text style={styles.secondaryButtonText}>Reset</Text>
           </Pressable>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      <Modal
+        visible={isAddPurchaseModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeAddPurchaseModal}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalKeyboardAvoidingView}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <Text style={styles.modalTitle}>Add Purchase</Text>
+
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>Purchase Amount</Text>
+
+                <TextInput
+                  style={styles.input}
+                  value={amountInput}
+                  onChangeText={setAmountInput}
+                  placeholder="Example: 12.50"
+                  placeholderTextColor="#777777"
+                  keyboardType="decimal-pad"
+                />
+
+                <Text style={styles.inputLabel}>Description</Text>
+
+                <TextInput
+                  style={styles.input}
+                  value={descriptionInput}
+                  onChangeText={setDescriptionInput}
+                  placeholder="Example: Coffee"
+                  placeholderTextColor="#777777"
+                  maxLength={MAX_DESCRIPTION_LENGTH}
+                />
+
+                <Text style={styles.characterCount}>
+                  {descriptionCharacterCount} / {MAX_DESCRIPTION_LENGTH}
+                </Text>
+              </View>
+
+              <Pressable
+                style={[
+                  styles.primaryButton,
+                  cannotAddSpendingEntry && styles.disabledButton,
+                ]}
+                onPress={addManualSpendingEntry}
+                disabled={cannotAddSpendingEntry}
+              >
+                <Text style={styles.primaryButtonText}>Add Purchase</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={closeAddPurchaseModal}
+              >
+                <Text style={styles.secondaryButtonText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
   );
 }

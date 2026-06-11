@@ -148,4 +148,32 @@ export const homeScreenStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    justifyContent: "flex-start",
+    padding: 16,
+    paddingTop: 200,
+  },
+
+  modalSheet: {
+    backgroundColor: "#101010",
+    borderRadius: 28,
+    padding: 24,
+    borderColor: "#222222",
+    borderWidth: 1,
+    width: "100%",
+    maxWidth: 380,
+    alignSelf: "center",
+  },
+
+  modalTitle: {
+    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 20,
+  },
+  modalKeyboardAvoidingView: {
+    flex: 1,
+  },
 });
