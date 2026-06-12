@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useEffect, useState } from "react";
 import {
   Keyboard,
@@ -26,16 +27,10 @@ const MAX_DESCRIPTION_LENGTH = 25;
 
 // Main screen component. This re-renders whenever one of its state setters is called.
 export default function HomeScreen() {
-  // Holds the raw text typed into the amount input
   const [amountInput, setAmountInput] = useState("");
-
-  // Holds the raw text typed into the description input
   const [descriptionInput, setDescriptionInput] = useState("");
-
-  // Main local ledger array. This replaces the old purchases array.
+  const [selectedSpentDate, setSelectedSpentDate] = useState(new Date());
   const [spendingEntries, setSpendingEntries] = useState<SpendingEntry[]>([]);
-
-  // Tracks whether AsyncStorage has finished loading saved data
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [isAddPurchaseModalVisible, setIsAddPurchaseModalVisible] =
     useState(false);
@@ -188,7 +183,7 @@ export default function HomeScreen() {
       source: "manual",
       amount: spendingAmount,
       description: descriptionText,
-      spentAt: now,
+      spentAt: selectedSpentDate.toISOString(),
       createdAt: now,
     };
 
@@ -229,6 +224,7 @@ export default function HomeScreen() {
   }
 
   function openAddPurchaseModal() {
+    setSelectedSpentDate(new Date());
     setIsAddPurchaseModalVisible(true);
   }
 
@@ -236,6 +232,7 @@ export default function HomeScreen() {
     Keyboard.dismiss();
     setAmountInput("");
     setDescriptionInput("");
+    setSelectedSpentDate(new Date());
     setIsAddPurchaseModalVisible(false);
   }
 
@@ -315,7 +312,21 @@ export default function HomeScreen() {
             <View style={styles.modalSheet}>
               <Text style={styles.modalTitle}>Add Purchase</Text>
 
+              <Text style={styles.inputLabel}>Purchase Date</Text>
               <View style={styles.inputWrapper}>
+                <View style={styles.datePickerWrapper}>
+                  <DateTimePicker
+                    value={selectedSpentDate}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "compact" : "default"}
+                    onChange={(_event, selectedDate) => {
+                      if (selectedDate !== undefined) {
+                        setSelectedSpentDate(selectedDate);
+                      }
+                    }}
+                  />
+                </View>
+
                 <Text style={styles.inputLabel}>Purchase Amount</Text>
 
                 <TextInput

@@ -92,6 +92,15 @@ export const homeScreenStyles = StyleSheet.create({
     maxWidth: 320,
     marginBottom: 18,
   },
+  datePickerWrapper: {
+    // backgroundColor: "#151515",
+    // borderColor: "#333333",
+    // borderWidth: 1,
+    // borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    width: "100%",
+  },
   inputLabel: {
     color: "#a8a8a8",
     fontSize: 14,
@@ -172,6 +181,7 @@ export const homeScreenStyles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
     marginBottom: 20,
+    alignSelf: "center",
   },
   modalKeyboardAvoidingView: {
     flex: 1,
