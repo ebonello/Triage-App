@@ -150,10 +150,10 @@ export const homeScreenStyles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    backgroundColor: "rgba(0, 0, 0, 1)",
     justifyContent: "flex-start",
     padding: 16,
-    paddingTop: 200,
+    paddingTop: 150,
   },
 
   modalSheet: {
@@ -175,5 +175,6 @@ export const homeScreenStyles = StyleSheet.create({
   },
   modalKeyboardAvoidingView: {
     flex: 1,
+    backgroundColor: "#050505",
   },
 });

@@ -13,6 +13,10 @@ import {
 } from "react-native";
 import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 import type { SpendingEntry } from "../../types/spendingEntry";
+import {
+  calculateSpendingTotal,
+  getSpendingEntriesForDate,
+} from "../../utils/spendingCalculations";
 
 // Storage key used by AsyncStorage to save the local ledger on the phone
 const SPENDING_ENTRIES_STORAGE_KEY = "triage:spendingEntries";
@@ -129,102 +133,40 @@ export default function HomeScreen() {
     );
   }
 
-  /*
-    Convert the amount input from a string into a number.
-
-    TextInput always gives us text, so "12.50" needs to become 12.5
-    before we can use it in math.
-  */
   const spendingAmount = Number(amountInput);
 
   // Validate that the amount is a real number and greater than zero
   const isValidAmount = Number.isFinite(spendingAmount) && spendingAmount > 0;
-
-  /*
-    Trim the description so spaces at the beginning/end do not count.
-
-    Example:
-    " Coffee " becomes "Coffee"
-    "     " becomes ""
-  */
   const descriptionText = descriptionInput.trim();
 
   // Counts the characters currently typed into the description input
   const descriptionCharacterCount = descriptionInput.length;
-
-  /*
-    Description is valid only if:
-    - trimmed text has at least 1 character
-    - raw input does not exceed the max length
-  */
   const isValidDescription =
     descriptionText.length > 0 &&
     descriptionCharacterCount <= MAX_DESCRIPTION_LENGTH;
 
   /*
     Combined form validation.
-
     The user can only add a spending entry if both fields are valid.
   */
   const canAddSpendingEntry = isValidAmount && isValidDescription;
-
-  // More readable inverse used by the button disabled logic
   const cannotAddSpendingEntry = !canAddSpendingEntry;
 
-  /*
-    Create a new array of only today's spending entries.
+  const todaysSpendingEntries = getSpendingEntriesForDate(
+    spendingEntries,
+    new Date(),
+  );
 
-    spendingEntries = full local ledger
-    todaysSpendingEntries = only entries where spentAt is today
-  */
-  const todaysSpendingEntries = spendingEntries.filter((spendingEntry) => {
-    return isSpendingEntryFromToday(spendingEntry);
-  });
-
-  /*
-    Calculate today's running total.
-
-    reduce() turns the todaysSpendingEntries array into one number.
-    It starts at 0, then adds each spendingEntry.amount.
-  */
-  const spentToday = todaysSpendingEntries.reduce((total, spendingEntry) => {
-    return total + spendingEntry.amount;
-  }, 0);
+  const spentToday = calculateSpendingTotal(todaysSpendingEntries);
 
   // Format the running total for display in the UI
   const formattedSpentToday = formatCurrency(spentToday);
 
-  /*
-    Helper function to format a number as US currency.
-
-    Example:
-    12.5 becomes "$12.50"
-  */
   function formatCurrency(amount: number) {
     return amount.toLocaleString("en-US", {
       style: "currency",
       currency: "USD",
     });
-  }
-
-  /*
-    Helper function that checks whether a spending entry belongs to today.
-
-    Important:
-    We use spentAt, not createdAt.
-
-    spentAt = when the spending actually happened
-    createdAt = when the record was created in the app
-  */
-  function isSpendingEntryFromToday(spendingEntry: SpendingEntry) {
-    const spentDate = new Date(spendingEntry.spentAt);
-    const today = new Date();
-
-    return (
-      spentDate.getFullYear() === today.getFullYear() &&
-      spentDate.getMonth() === today.getMonth() &&
-      spentDate.getDate() === today.getDate()
-    );
   }
 
   /*
@@ -262,15 +204,9 @@ export default function HomeScreen() {
       ...previousSpendingEntries,
     ]);
 
-    // Clear both input fields after the spending entry is added
     closeAddPurchaseModal();
   }
 
-  /*
-    Resets the local ledger and clears the input fields.
-
-    Later, we may move this somewhere harder to accidentally press.
-  */
   function resetTotal() {
     Keyboard.dismiss();
     setAmountInput("");
@@ -366,8 +302,9 @@ export default function HomeScreen() {
       </ScrollView>
       <Modal
         visible={isAddPurchaseModalVisible}
-        transparent={true}
+        transparent={false}
         animationType="fade"
+        presentationStyle="fullScreen"
         onRequestClose={closeAddPurchaseModal}
       >
         <KeyboardAvoidingView
