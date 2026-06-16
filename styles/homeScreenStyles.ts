@@ -187,4 +187,51 @@ export const homeScreenStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#050505",
   },
+  resetModalScreen: {
+    flex: 1,
+    backgroundColor: "#050505",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+
+  resetModalCard: {
+    backgroundColor: "#101010",
+    borderRadius: 28,
+    padding: 24,
+    borderColor: "#222222",
+    borderWidth: 1,
+    width: "100%",
+    maxWidth: 380,
+  },
+
+  resetModalTitle: {
+    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+
+  resetModalMessage: {
+    color: "#a8a8a8",
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+
+  dangerButton: {
+    backgroundColor: "#ff6b6b",
+    paddingVertical: 16,
+    paddingHorizontal: 28,
+    borderRadius: 999,
+    marginBottom: 14,
+    width: "100%",
+    alignItems: "center",
+  },
+
+  dangerButtonText: {
+    color: "#050505",
+    fontSize: 18,
+    fontWeight: "700",
+  },
 });

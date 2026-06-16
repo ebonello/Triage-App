@@ -34,7 +34,8 @@ export default function HomeScreen() {
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [isAddPurchaseModalVisible, setIsAddPurchaseModalVisible] =
     useState(false);
-
+  const [isResetConfirmModalVisible, setIsResetConfirmModalVisible] =
+    useState(false);
   /*
     useEffect runs AFTER the component renders.
 
@@ -202,11 +203,12 @@ export default function HomeScreen() {
     closeAddPurchaseModal();
   }
 
-  function resetTotal() {
+  function confirmResetTotal() {
     Keyboard.dismiss();
     setAmountInput("");
     setDescriptionInput("");
     setSpendingEntries([]);
+    closeResetConfirmModal();
   }
 
   /*
@@ -234,6 +236,14 @@ export default function HomeScreen() {
     setDescriptionInput("");
     setSelectedSpentDate(new Date());
     setIsAddPurchaseModalVisible(false);
+  }
+
+  function openResetConfirmModal() {
+    setIsResetConfirmModalVisible(true);
+  }
+
+  function closeResetConfirmModal() {
+    setIsResetConfirmModalVisible(false);
   }
 
   return (
@@ -292,7 +302,10 @@ export default function HomeScreen() {
               );
             })}
           </View>
-          <Pressable style={styles.secondaryButton} onPress={resetTotal}>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={openResetConfirmModal}
+          >
             <Text style={styles.secondaryButtonText}>Reset</Text>
           </Pressable>
         </View>
@@ -374,6 +387,35 @@ export default function HomeScreen() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+      <Modal
+        visible={isResetConfirmModalVisible}
+        transparent={false}
+        animationType="none"
+        presentationStyle="fullScreen"
+        onRequestClose={closeResetConfirmModal}
+      >
+        <View style={styles.resetModalScreen}>
+          <View style={styles.resetModalCard}>
+            <Text style={styles.resetModalTitle}>Reset all spending?</Text>
+
+            <Text style={styles.resetModalMessage}>
+              This will clear all saved spending entries from the app. This
+              cannot be undone.
+            </Text>
+
+            <Pressable style={styles.dangerButton} onPress={confirmResetTotal}>
+              <Text style={styles.dangerButtonText}>Clear Everything</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={closeResetConfirmModal}
+            >
+              <Text style={styles.secondaryButtonText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );
