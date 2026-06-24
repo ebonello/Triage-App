@@ -151,6 +151,7 @@ export const homeScreenStyles = StyleSheet.create({
     width: "100%",
     maxWidth: 320,
     alignItems: "center",
+    margin: 10,
   },
   secondaryButtonText: {
     color: "#ffffff",

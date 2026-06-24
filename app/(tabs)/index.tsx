@@ -12,7 +12,9 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { fetchBankTransactionsSync } from "../../api/bankTransactionsApi";
 import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
+import type { BankTransaction } from "../../types/bankTransaction";
 import type { SpendingEntry } from "../../types/spendingEntry";
 import {
   calculateSpendingTotal,
@@ -31,6 +33,14 @@ export default function HomeScreen() {
   const [descriptionInput, setDescriptionInput] = useState("");
   const [selectedSpentDate, setSelectedSpentDate] = useState(new Date());
   const [spendingEntries, setSpendingEntries] = useState<SpendingEntry[]>([]);
+  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>(
+    [],
+  );
+  const [isBankTransactionsLoading, setIsBankTransactionsLoading] =
+    useState(false);
+  const [bankTransactionsError, setBankTransactionsError] = useState<
+    string | null
+  >(null);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [isAddPurchaseModalVisible, setIsAddPurchaseModalVisible] =
     useState(false);
@@ -211,6 +221,30 @@ export default function HomeScreen() {
     closeResetConfirmModal();
   }
 
+  async function importFakeBankTransactions() {
+    setIsBankTransactionsLoading(true);
+    setBankTransactionsError(null);
+
+    try {
+      const transactionsSyncResponse = await fetchBankTransactionsSync();
+
+      setBankTransactions(transactionsSyncResponse.added);
+
+      console.log(
+        "Imported fake bank transactions:",
+        transactionsSyncResponse.added,
+      );
+    } catch (error) {
+      console.log("Failed to import bank transactions:", error);
+
+      setBankTransactionsError(
+        "Unable to import bank transactions. Please try again.",
+      );
+    } finally {
+      setIsBankTransactionsLoading(false);
+    }
+  }
+
   /*
     Deletes one spending entry by id.
 
@@ -308,6 +342,30 @@ export default function HomeScreen() {
           >
             <Text style={styles.secondaryButtonText}>Reset</Text>
           </Pressable>
+          <Pressable
+            style={[
+              styles.secondaryButton,
+              isBankTransactionsLoading && styles.disabledButton,
+            ]}
+            onPress={importFakeBankTransactions}
+            disabled={isBankTransactionsLoading}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {isBankTransactionsLoading
+                ? "Importing Fake Bank Transactions..."
+                : "Import Fake Bank Transactions"}
+            </Text>
+          </Pressable>
+          {bankTransactionsError !== null && (
+            <Text style={styles.caption}>{bankTransactionsError}</Text>
+          )}
+
+          {bankTransactions.length > 0 && (
+            <Text style={styles.caption}>
+              Imported {bankTransactions.length} fake bank transaction
+              {bankTransactions.length === 1 ? "" : "s"}.
+            </Text>
+          )}
         </View>
       </ScrollView>
       <Modal
