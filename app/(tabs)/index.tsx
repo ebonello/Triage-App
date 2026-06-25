@@ -163,6 +163,12 @@ export default function HomeScreen() {
     new Date(),
   );
 
+  const sortedBankTransactions = [...bankTransactions].sort(
+    (firstTransaction, secondTransaction) => {
+      return secondTransaction.date.localeCompare(firstTransaction.date);
+    },
+  );
+
   const spentToday = calculateSpendingTotal(todaysSpendingEntries);
 
   // Format the running total for display in the UI
@@ -218,6 +224,7 @@ export default function HomeScreen() {
     setAmountInput("");
     setDescriptionInput("");
     setSpendingEntries([]);
+    setBankTransactions([]);
     closeResetConfirmModal();
   }
 
@@ -301,10 +308,10 @@ export default function HomeScreen() {
             <Text style={styles.primaryButtonText}>+ Add Purchase</Text>
           </Pressable>
           <View style={styles.purchaseList}>
-            <Text style={styles.sectionTitle}>Recent Spending:</Text>
+            <Text style={styles.sectionTitle}>Recent Manual Spending:</Text>
 
             {/*
-              map() loops through every item in todaysSpendingEntries.
+              map() loops through every item in StodayspendingEntries.
 
               For each spendingEntry, it creates a visible row on screen.
             */}
@@ -365,6 +372,40 @@ export default function HomeScreen() {
               Imported {bankTransactions.length} fake bank transaction
               {bankTransactions.length === 1 ? "" : "s"}.
             </Text>
+          )}
+          {sortedBankTransactions.length > 0 && (
+            <View style={styles.purchaseList}>
+              <Text style={styles.sectionTitle}>
+                Imported Bank Transactions
+              </Text>
+
+              {sortedBankTransactions.map((bankTransaction) => {
+                const transactionDescription =
+                  bankTransaction.merchant_name ?? bankTransaction.name;
+
+                return (
+                  <View
+                    key={bankTransaction.transaction_id}
+                    style={styles.bankTransactionItem}
+                  >
+                    <View style={styles.bankTransactionDetails}>
+                      <Text style={styles.bankTransactionName}>
+                        {transactionDescription}
+                      </Text>
+
+                      <Text style={styles.bankTransactionMeta}>
+                        {bankTransaction.date}
+                        {bankTransaction.pending ? " · Pending" : ""}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.purchaseAmount}>
+                      {formatCurrency(bankTransaction.amount)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           )}
         </View>
       </ScrollView>

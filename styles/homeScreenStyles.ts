@@ -64,7 +64,7 @@ export const homeScreenStyles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "700",
-    marginBottom: 10,
+    margin: 10,
   },
 
   purchaseItem: {
@@ -234,5 +234,30 @@ export const homeScreenStyles = StyleSheet.create({
     color: "#050505",
     fontSize: 18,
     fontWeight: "700",
+  },
+  bankTransactionItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomColor: "#222222",
+    borderBottomWidth: 1,
+  },
+
+  bankTransactionDetails: {
+    flex: 1,
+    marginRight: 16,
+  },
+
+  bankTransactionName: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  bankTransactionMeta: {
+    color: "#a8a8a8",
+    fontSize: 13,
+    marginTop: 4,
   },
 });
