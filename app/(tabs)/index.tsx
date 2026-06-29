@@ -17,6 +17,10 @@ import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 import type { BankTransaction } from "../../types/bankTransaction";
 import type { SpendingEntry } from "../../types/spendingEntry";
 import {
+  mapBankTransactionToLedgerItem,
+  mapSpendingEntryToLedgerItem,
+} from "../../utils/ledgerItemMappers";
+import {
   calculateSpendingTotal,
   getSpendingEntriesForDate,
 } from "../../utils/spendingCalculations";
@@ -180,6 +184,44 @@ export default function HomeScreen() {
       currency: "USD",
     });
   }
+
+  const manualLedgerItems = spendingEntries.map((spendingEntry) => {
+    return mapSpendingEntryToLedgerItem(spendingEntry);
+  });
+
+  const bankLedgerItems = bankTransactions.map((bankTransaction) => {
+    return mapBankTransactionToLedgerItem(bankTransaction);
+  });
+
+  const ledgerItems = [...manualLedgerItems, ...bankLedgerItems];
+
+  const sortedLedgerItems = [...ledgerItems].sort((firstItem, secondItem) => {
+    const dateComparison = secondItem.spentOn.localeCompare(firstItem.spentOn);
+
+    if (dateComparison !== 0) {
+      return dateComparison;
+    }
+
+    if (
+      firstItem.occurredAt !== undefined &&
+      secondItem.occurredAt !== undefined
+    ) {
+      return (
+        new Date(secondItem.occurredAt).getTime() -
+        new Date(firstItem.occurredAt).getTime()
+      );
+    }
+
+    if (firstItem.occurredAt !== undefined) {
+      return -1;
+    }
+
+    if (secondItem.occurredAt !== undefined) {
+      return 1;
+    }
+
+    return 0;
+  });
 
   /*
     Main function for manually adding a spending entry from the UI.

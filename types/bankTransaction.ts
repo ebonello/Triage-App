@@ -11,6 +11,8 @@ export type BankTransaction = {
   iso_currency_code: string;
   date: string;
   authorized_date: string | null;
+  authorized_datetime: string | null;
+  datetime: string | null;
   name: string;
   merchant_name: string | null;
   pending: boolean;
