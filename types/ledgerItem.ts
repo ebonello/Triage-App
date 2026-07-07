@@ -5,7 +5,6 @@ export type LedgerItem = {
   amount: number;
   description: string;
   spentOn: string;
-  occurredAt?: string;
   category?: string;
   isPending: boolean;
 };

@@ -260,4 +260,33 @@ export const homeScreenStyles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
+  activityItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomColor: "#222222",
+    borderBottomWidth: 1,
+  },
+
+  activityDetails: {
+    flex: 1,
+    marginRight: 16,
+  },
+
+  activityDescription: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  activityMeta: {
+    color: "#a8a8a8",
+    fontSize: 13,
+    marginTop: 4,
+  },
+
+  activityRightColumn: {
+    alignItems: "flex-end",
+  },
 });

@@ -22,7 +22,6 @@ export function mapSpendingEntryToLedgerItem(
     amount: spendingEntry.amount,
     description: spendingEntry.description,
     spentOn: getLocalDateStringFromTimestamp(spendingEntry.spentAt),
-    occurredAt: spendingEntry.spentAt,
     isPending: false,
   };
 }
@@ -33,9 +32,6 @@ export function mapBankTransactionToLedgerItem(
   const description = bankTransaction.merchant_name ?? bankTransaction.name;
 
   const spentOn = bankTransaction.authorized_date ?? bankTransaction.date;
-
-  const occurredAt =
-    bankTransaction.authorized_datetime ?? bankTransaction.datetime;
 
   const category = bankTransaction.personal_finance_category?.primary;
 
@@ -48,10 +44,6 @@ export function mapBankTransactionToLedgerItem(
     spentOn,
     isPending: bankTransaction.pending,
   };
-
-  if (occurredAt !== null) {
-    ledgerItem.occurredAt = occurredAt;
-  }
 
   if (category !== undefined) {
     ledgerItem.category = category;

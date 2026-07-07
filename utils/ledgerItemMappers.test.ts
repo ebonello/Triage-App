@@ -1,9 +1,9 @@
 import type { BankTransaction } from "../types/bankTransaction";
 import type { SpendingEntry } from "../types/spendingEntry";
 import {
-    getLocalDateStringFromTimestamp,
-    mapBankTransactionToLedgerItem,
-    mapSpendingEntryToLedgerItem,
+  getLocalDateStringFromTimestamp,
+  mapBankTransactionToLedgerItem,
+  mapSpendingEntryToLedgerItem,
 } from "./ledgerItemMappers";
 
 describe("ledger item mappers", () => {
@@ -36,12 +36,11 @@ describe("ledger item mappers", () => {
       amount: 14.25,
       description: "Lunch",
       spentOn: "2026-06-29",
-      occurredAt: spentAt,
       isPending: false,
     });
   });
 
-  test("maps a bank transaction to a ledger item using preferred Plaid fields", () => {
+  test("maps a bank transaction using the preferred date and merchant fields", () => {
     const bankTransaction: BankTransaction = {
       transaction_id: "fake_txn_coffee_001",
       account_id: "fake_account_checking_001",
@@ -72,7 +71,6 @@ describe("ledger item mappers", () => {
       amount: 6.5,
       description: "Coffee Shop",
       spentOn: "2026-06-29",
-      occurredAt: "2026-06-29T16:42:00Z",
       category: "FOOD_AND_DRINK",
       isPending: false,
     });
@@ -105,12 +103,11 @@ describe("ledger item mappers", () => {
       amount: 38.1,
       description: "SHELL OIL 123456",
       spentOn: "2026-06-28",
-      occurredAt: "2026-06-28T22:15:00Z",
       isPending: false,
     });
   });
 
-  test("does not invent an occurredAt value for date-only bank transactions", () => {
+  test("maps a date-only bank transaction without adding time data to the ledger item", () => {
     const bankTransaction: BankTransaction = {
       transaction_id: "fake_txn_lunch_001",
       account_id: "fake_account_credit_001",
@@ -134,8 +131,15 @@ describe("ledger item mappers", () => {
 
     const result = mapBankTransactionToLedgerItem(bankTransaction);
 
-    expect(result.occurredAt).toBeUndefined();
-    expect(result.spentOn).toBe("2026-06-29");
-    expect(result.isPending).toBe(true);
+    expect(result).toEqual({
+      id: "bank:fake_txn_lunch_001",
+      sourceId: "fake_txn_lunch_001",
+      source: "bank",
+      amount: 14.25,
+      description: "Burger Place",
+      spentOn: "2026-06-29",
+      category: "FOOD_AND_DRINK",
+      isPending: true,
+    });
   });
 });

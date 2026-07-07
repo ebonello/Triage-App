@@ -17,6 +17,7 @@ import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 import type { BankTransaction } from "../../types/bankTransaction";
 import type { SpendingEntry } from "../../types/spendingEntry";
 import {
+  getLocalDateStringFromTimestamp,
   mapBankTransactionToLedgerItem,
   mapSpendingEntryToLedgerItem,
 } from "../../utils/ledgerItemMappers";
@@ -167,11 +168,11 @@ export default function HomeScreen() {
     new Date(),
   );
 
-  const sortedBankTransactions = [...bankTransactions].sort(
-    (firstTransaction, secondTransaction) => {
-      return secondTransaction.date.localeCompare(firstTransaction.date);
-    },
-  );
+  // const sortedBankTransactions = [...bankTransactions].sort(
+  //   (firstTransaction, secondTransaction) => {
+  //     return secondTransaction.date.localeCompare(firstTransaction.date);
+  //   },
+  // );
 
   const spentToday = calculateSpendingTotal(todaysSpendingEntries);
 
@@ -196,31 +197,13 @@ export default function HomeScreen() {
   const ledgerItems = [...manualLedgerItems, ...bankLedgerItems];
 
   const sortedLedgerItems = [...ledgerItems].sort((firstItem, secondItem) => {
-    const dateComparison = secondItem.spentOn.localeCompare(firstItem.spentOn);
+    return secondItem.spentOn.localeCompare(firstItem.spentOn);
+  });
 
-    if (dateComparison !== 0) {
-      return dateComparison;
-    }
+  const todayDate = getLocalDateStringFromTimestamp(new Date().toISOString());
 
-    if (
-      firstItem.occurredAt !== undefined &&
-      secondItem.occurredAt !== undefined
-    ) {
-      return (
-        new Date(secondItem.occurredAt).getTime() -
-        new Date(firstItem.occurredAt).getTime()
-      );
-    }
-
-    if (firstItem.occurredAt !== undefined) {
-      return -1;
-    }
-
-    if (secondItem.occurredAt !== undefined) {
-      return 1;
-    }
-
-    return 0;
+  const todaysLedgerItems = sortedLedgerItems.filter((ledgerItem) => {
+    return ledgerItem.spentOn === todayDate;
   });
 
   /*
@@ -349,42 +332,48 @@ export default function HomeScreen() {
           >
             <Text style={styles.primaryButtonText}>+ Add Purchase</Text>
           </Pressable>
-          <View style={styles.purchaseList}>
-            <Text style={styles.sectionTitle}>Recent Manual Spending:</Text>
+          {todaysLedgerItems.length > 0 && (
+            <View style={styles.purchaseList}>
+              <Text style={styles.sectionTitle}>Today's Purchases</Text>
 
-            {/*
-              map() loops through every item in StodayspendingEntries.
+              {todaysLedgerItems.map((ledgerItem) => {
+                const sourceLabel =
+                  ledgerItem.source === "manual" ? "Manual" : "Bank import";
 
-              For each spendingEntry, it creates a visible row on screen.
-            */}
-            {todaysSpendingEntries.map((spendingEntry) => {
-              return (
-                <View key={spendingEntry.id} style={styles.purchaseItem}>
-                  <Text style={styles.purchaseAmount}>
-                    {formatCurrency(spendingEntry.amount)}
-                  </Text>
+                return (
+                  <View key={ledgerItem.id} style={styles.activityItem}>
+                    <View style={styles.activityDetails}>
+                      <Text style={styles.activityDescription}>
+                        {ledgerItem.description}
+                      </Text>
 
-                  <Text style={styles.purchaseAmount}>
-                    {spendingEntry.description}
-                  </Text>
+                      <Text style={styles.activityMeta}>
+                        {ledgerItem.spentOn} · {sourceLabel}
+                        {ledgerItem.isPending ? " · Pending" : ""}
+                      </Text>
+                    </View>
 
-                  {/*
-                    This delete button is created inside the map() loop,
-                    so it has access to the current spendingEntry.
+                    <View style={styles.activityRightColumn}>
+                      <Text style={styles.purchaseAmount}>
+                        {formatCurrency(ledgerItem.amount)}
+                      </Text>
 
-                    The arrow function prevents deleteSpendingEntry from
-                    running immediately. It only runs later, when pressed.
-                  */}
-                  <Pressable
-                    onPress={() => deleteSpendingEntry(spendingEntry.id)}
-                    hitSlop={12}
-                  >
-                    <Text style={styles.deleteText}>Delete</Text>
-                  </Pressable>
-                </View>
-              );
-            })}
-          </View>
+                      {ledgerItem.source === "manual" && (
+                        <Pressable
+                          hitSlop={12}
+                          onPress={() => {
+                            deleteSpendingEntry(ledgerItem.sourceId);
+                          }}
+                        >
+                          <Text style={styles.deleteText}>Delete</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
           <Pressable
             style={styles.secondaryButton}
             onPress={openResetConfirmModal}
@@ -414,40 +403,6 @@ export default function HomeScreen() {
               Imported {bankTransactions.length} fake bank transaction
               {bankTransactions.length === 1 ? "" : "s"}.
             </Text>
-          )}
-          {sortedBankTransactions.length > 0 && (
-            <View style={styles.purchaseList}>
-              <Text style={styles.sectionTitle}>
-                Imported Bank Transactions
-              </Text>
-
-              {sortedBankTransactions.map((bankTransaction) => {
-                const transactionDescription =
-                  bankTransaction.merchant_name ?? bankTransaction.name;
-
-                return (
-                  <View
-                    key={bankTransaction.transaction_id}
-                    style={styles.bankTransactionItem}
-                  >
-                    <View style={styles.bankTransactionDetails}>
-                      <Text style={styles.bankTransactionName}>
-                        {transactionDescription}
-                      </Text>
-
-                      <Text style={styles.bankTransactionMeta}>
-                        {bankTransaction.date}
-                        {bankTransaction.pending ? " · Pending" : ""}
-                      </Text>
-                    </View>
-
-                    <Text style={styles.purchaseAmount}>
-                      {formatCurrency(bankTransaction.amount)}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
           )}
         </View>
       </ScrollView>
