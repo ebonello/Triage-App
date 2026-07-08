@@ -1,6 +1,8 @@
+**TRIAGE**
+
 This is first an foremost a vehicle to learn a modern development workflow for a mobile-first app using a modern stack.
 
-Running Total is a mobile spending-tracking app designed to help users monitor their daily spending in real time. The main purpose of the app is to give users a quick, simple view of how much they have spent today, while also supporting longer-term spending history, weekly totals, and future budget breakdowns.
+Triage is a mobile spending-tracking app designed to help users monitor their daily spending in real time. The main purpose of the app is to give users a quick, simple view of how much they have spent today, while also supporting longer-term spending history, weekly totals, and future budget breakdowns.
 The app allows users to manually enter purchases with an amount, description, and purchase date.
 
 These entries are saved locally so users can track spending immediately, even before bank transaction data becomes available. Each entry stores both the date the purchase occurred and the date the record was created, which supports backdated entries and more accurate daily totals.
