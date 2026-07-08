@@ -1,4 +1,17 @@
-# Welcome to your Expo app 👋
+This is first an foremost a vehicle to learn a modern development workflow for a mobile-first app using a modern stack.
+
+Running Total is a mobile spending-tracking app designed to help users monitor their daily spending in real time. The main purpose of the app is to give users a quick, simple view of how much they have spent today, while also supporting longer-term spending history, weekly totals, and future budget breakdowns.
+The app allows users to manually enter purchases with an amount, description, and purchase date.
+
+These entries are saved locally so users can track spending immediately, even before bank transaction data becomes available. Each entry stores both the date the purchase occurred and the date the record was created, which supports backdated entries and more accurate daily totals.
+
+The long-term goal is to support imported banking transactions from multiple accounts using a Plaid-style integration. Manual entries and bank-imported transactions will remain separate data sources so they can eventually be reconciled and matched without double-counting the same purchase.
+
+The app is being built with React Native and Expo for the mobile front end, TypeScript for typed data models, AsyncStorage for local persistence, and Jest for testing core business logic. A local Express backend is being used during development to simulate Plaid-style transaction sync data before connecting to a real banking API.
+
+At completion, the app is intended to provide a simple daily spending dashboard, purchase history by date, imported banking transaction support, and reconciliation logic between manual and bank-provided spending data.
+
+Current Demo
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
