@@ -13,7 +13,7 @@ The app is being built with React Native and Expo for the mobile front end, Type
 
 At completion, the app is intended to provide a simple daily spending dashboard, purchase history by date, imported banking transaction support, and reconciliation logic between manual and bank-provided spending data.
 
-Current Demo
+[Current Demo](https://drive.google.com/file/d/1sXNw5k5RULdPGUX8w6_VZQI9-2mEQaeJ/view?usp=sharing)
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
