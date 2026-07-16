@@ -16,15 +16,12 @@ import { fetchBankTransactionsSync } from "../../api/bankTransactionsApi";
 import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 import type { BankTransaction } from "../../types/bankTransaction";
 import type { SpendingEntry } from "../../types/spendingEntry";
+import { calculateLedgerItemTotal } from "../../utils/ledgerCalculations";
 import {
   getLocalDateStringFromTimestamp,
   mapBankTransactionToLedgerItem,
   mapSpendingEntryToLedgerItem,
 } from "../../utils/ledgerItemMappers";
-import {
-  calculateSpendingTotal,
-  getSpendingEntriesForDate,
-} from "../../utils/spendingCalculations";
 
 // Storage key used by AsyncStorage to save the local ledger on the phone
 const SPENDING_ENTRIES_STORAGE_KEY = "triage:spendingEntries";
@@ -163,22 +160,6 @@ export default function HomeScreen() {
   const canAddSpendingEntry = isValidAmount && isValidDescription;
   const cannotAddSpendingEntry = !canAddSpendingEntry;
 
-  const todaysSpendingEntries = getSpendingEntriesForDate(
-    spendingEntries,
-    new Date(),
-  );
-
-  // const sortedBankTransactions = [...bankTransactions].sort(
-  //   (firstTransaction, secondTransaction) => {
-  //     return secondTransaction.date.localeCompare(firstTransaction.date);
-  //   },
-  // );
-
-  const spentToday = calculateSpendingTotal(todaysSpendingEntries);
-
-  // Format the running total for display in the UI
-  const formattedSpentToday = formatCurrency(spentToday);
-
   function formatCurrency(amount: number) {
     return amount.toLocaleString("en-US", {
       style: "currency",
@@ -205,6 +186,10 @@ export default function HomeScreen() {
   const todaysLedgerItems = sortedLedgerItems.filter((ledgerItem) => {
     return ledgerItem.spentOn === todayDate;
   });
+
+  const spentToday = calculateLedgerItemTotal(todaysLedgerItems);
+
+  const formattedSpentToday = formatCurrency(spentToday);
 
   /*
     Main function for manually adding a spending entry from the UI.
@@ -321,7 +306,7 @@ export default function HomeScreen() {
         <View style={styles.container}>
           <Text style={styles.appName}>Triage</Text>
 
-          <Text style={styles.subtitle}>What's the damage?</Text>
+          <Text style={styles.subtitle}>{"What's the damage?"}</Text>
 
           <Text style={styles.amount}>{formattedSpentToday}</Text>
 
@@ -334,7 +319,7 @@ export default function HomeScreen() {
           </Pressable>
           {todaysLedgerItems.length > 0 && (
             <View style={styles.purchaseList}>
-              <Text style={styles.sectionTitle}>Today's Purchases</Text>
+              <Text style={styles.sectionTitle}>{"Today's Purchases"}</Text>
 
               {todaysLedgerItems.map((ledgerItem) => {
                 const sourceLabel =
