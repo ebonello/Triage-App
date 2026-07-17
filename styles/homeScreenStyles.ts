@@ -20,9 +20,6 @@ export const homeScreenStyles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  scrollContent: {
-    flexGrow: 1,
-  },
   container: {
     flex: 1,
     backgroundColor: "#050505",
@@ -30,24 +27,28 @@ export const homeScreenStyles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
+
   appName: {
     color: "#ffffff",
     fontSize: 36,
     fontWeight: "700",
     marginBottom: 12,
   },
+
   subtitle: {
     color: "#cfcfcf",
     fontSize: 18,
     textAlign: "center",
     marginBottom: 40,
   },
+
   amount: {
     color: "#ffffff",
     fontSize: 64,
     fontWeight: "800",
     marginBottom: 8,
   },
+
   caption: {
     color: "#a8a8a8",
     fontSize: 18,
@@ -55,9 +56,9 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   purchaseList: {
+    flex: 1,
     width: "100%",
-    maxWidth: 320,
-    marginBottom: 24,
+    marginTop: 12,
   },
 
   sectionTitle: {
@@ -67,13 +68,34 @@ export const homeScreenStyles = StyleSheet.create({
     margin: 10,
   },
 
-  purchaseItem: {
+  activityItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomColor: "#222222",
     borderBottomWidth: 1,
+  },
+
+  activityDetails: {
+    flex: 1,
+    marginRight: 16,
+  },
+
+  activityDescription: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  activityMeta: {
+    color: "#a8a8a8",
+    fontSize: 13,
+    marginTop: 4,
+  },
+
+  activityRightColumn: {
+    alignItems: "flex-end",
   },
 
   purchaseAmount: {
@@ -92,6 +114,7 @@ export const homeScreenStyles = StyleSheet.create({
     maxWidth: 320,
     marginBottom: 18,
   },
+
   datePickerWrapper: {
     // backgroundColor: "#151515",
     // borderColor: "#333333",
@@ -101,18 +124,21 @@ export const homeScreenStyles = StyleSheet.create({
     paddingHorizontal: 12,
     width: "100%",
   },
+
   inputLabel: {
     color: "#a8a8a8",
     fontSize: 14,
     marginBottom: 8,
     marginTop: 8,
   },
+
   characterCount: {
     color: "#777777",
     fontSize: 12,
     textAlign: "right",
     marginTop: 6,
   },
+
   input: {
     backgroundColor: "#151515",
     color: "#ffffff",
@@ -124,6 +150,7 @@ export const homeScreenStyles = StyleSheet.create({
     fontSize: 20,
     width: "100%",
   },
+
   primaryButton: {
     backgroundColor: "#ffffff",
     paddingVertical: 16,
@@ -134,14 +161,17 @@ export const homeScreenStyles = StyleSheet.create({
     maxWidth: 320,
     alignItems: "center",
   },
+
   disabledButton: {
     opacity: 0.35,
   },
+
   primaryButtonText: {
     color: "#050505",
     fontSize: 18,
     fontWeight: "700",
   },
+
   secondaryButton: {
     borderColor: "#555555",
     borderWidth: 1,
@@ -153,11 +183,13 @@ export const homeScreenStyles = StyleSheet.create({
     alignItems: "center",
     margin: 10,
   },
+
   secondaryButtonText: {
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
   },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 1)",
@@ -184,10 +216,12 @@ export const homeScreenStyles = StyleSheet.create({
     marginBottom: 20,
     alignSelf: "center",
   },
+
   modalKeyboardAvoidingView: {
     flex: 1,
     backgroundColor: "#050505",
   },
+
   resetModalScreen: {
     flex: 1,
     backgroundColor: "#050505",
@@ -234,59 +268,5 @@ export const homeScreenStyles = StyleSheet.create({
     color: "#050505",
     fontSize: 18,
     fontWeight: "700",
-  },
-  bankTransactionItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomColor: "#222222",
-    borderBottomWidth: 1,
-  },
-
-  bankTransactionDetails: {
-    flex: 1,
-    marginRight: 16,
-  },
-
-  bankTransactionName: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  bankTransactionMeta: {
-    color: "#a8a8a8",
-    fontSize: 13,
-    marginTop: 4,
-  },
-  activityItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomColor: "#222222",
-    borderBottomWidth: 1,
-  },
-
-  activityDetails: {
-    flex: 1,
-    marginRight: 16,
-  },
-
-  activityDescription: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  activityMeta: {
-    color: "#a8a8a8",
-    fontSize: 13,
-    marginTop: 4,
-  },
-
-  activityRightColumn: {
-    alignItems: "flex-end",
   },
 });

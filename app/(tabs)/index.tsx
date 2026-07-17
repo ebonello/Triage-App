@@ -2,16 +2,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useEffect, useState } from "react";
 import {
+  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchBankTransactionsSync } from "../../api/bankTransactionsApi";
 import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 import type { BankTransaction } from "../../types/bankTransaction";
@@ -48,6 +49,7 @@ export default function HomeScreen() {
     useState(false);
   const [isResetConfirmModalVisible, setIsResetConfirmModalVisible] =
     useState(false);
+
   /*
     useEffect runs AFTER the component renders.
 
@@ -298,99 +300,133 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.container}>
-          <Text style={styles.appName}>Triage</Text>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
+      <View style={styles.container}>
+        <Text style={styles.appName}>Triage</Text>
 
-          <Text style={styles.subtitle}>{"What's the damage?"}</Text>
+        <Text style={styles.subtitle}>{"What's the damage?"}</Text>
 
-          <Text style={styles.amount}>{formattedSpentToday}</Text>
+        <Text style={styles.amount}>{formattedSpentToday}</Text>
 
-          <Text style={styles.caption}>Spent today</Text>
-          <Pressable
-            style={styles.primaryButton}
-            onPress={openAddPurchaseModal}
-          >
-            <Text style={styles.primaryButtonText}>+ Add Purchase</Text>
-          </Pressable>
-          {todaysLedgerItems.length > 0 && (
-            <View style={styles.purchaseList}>
-              <Text style={styles.sectionTitle}>{"Today's Purchases"}</Text>
+        <Text style={styles.caption}>Spent Today</Text>
 
-              {todaysLedgerItems.map((ledgerItem) => {
-                const sourceLabel =
-                  ledgerItem.source === "manual" ? "Manual" : "Bank import";
+        <Pressable style={styles.primaryButton} onPress={openAddPurchaseModal}>
+          <Text style={styles.primaryButtonText}>+ Add Purchase</Text>
+        </Pressable>
 
-                return (
-                  <View key={ledgerItem.id} style={styles.activityItem}>
-                    <View style={styles.activityDetails}>
-                      <Text style={styles.activityDescription}>
-                        {ledgerItem.description}
-                      </Text>
+        <Text style={styles.sectionTitle}>{"Today's Purchases"}</Text>
 
-                      <Text style={styles.activityMeta}>
-                        {ledgerItem.spentOn} · {sourceLabel}
-                        {ledgerItem.isPending ? " · Pending" : ""}
-                      </Text>
-                    </View>
-
-                    <View style={styles.activityRightColumn}>
-                      <Text style={styles.purchaseAmount}>
-                        {formatCurrency(ledgerItem.amount)}
-                      </Text>
-
-                      {ledgerItem.source === "manual" && (
-                        <Pressable
-                          hitSlop={12}
-                          onPress={() => {
-                            deleteSpendingEntry(ledgerItem.sourceId);
-                          }}
-                        >
-                          <Text style={styles.deleteText}>Delete</Text>
-                        </Pressable>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={openResetConfirmModal}
-          >
-            <Text style={styles.secondaryButtonText}>Reset</Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.secondaryButton,
-              isBankTransactionsLoading && styles.disabledButton,
-            ]}
-            onPress={importFakeBankTransactions}
-            disabled={isBankTransactionsLoading}
-          >
-            <Text style={styles.secondaryButtonText}>
-              {isBankTransactionsLoading
-                ? "Importing Fake Bank Transactions..."
-                : "Import Fake Bank Transactions"}
+        <FlatList
+          style={[
+            styles.purchaseList,
+            {
+              borderWidth: 1,
+              borderColor: "#333333",
+              borderRadius: 16,
+              overflow: "hidden",
+            },
+          ]}
+          contentContainerStyle={[
+            {
+              paddingLeft: 14,
+              paddingRight: 36,
+              paddingVertical: 8,
+            },
+            todaysLedgerItems.length === 0
+              ? {
+                  flexGrow: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }
+              : undefined,
+          ]}
+          data={todaysLedgerItems}
+          keyExtractor={(ledgerItem) => ledgerItem.id}
+          showsVerticalScrollIndicator={true}
+          indicatorStyle="white"
+          ListEmptyComponent={
+            <Text
+              style={{
+                color: "#a8a8a8",
+                fontSize: 15,
+                textAlign: "center",
+              }}
+            >
+              No purchases recorded today.
             </Text>
-          </Pressable>
-          {bankTransactionsError !== null && (
-            <Text style={styles.caption}>{bankTransactionsError}</Text>
-          )}
+          }
+          renderItem={({ item: ledgerItem }) => {
+            const sourceLabel =
+              ledgerItem.source === "manual" ? "Manual" : "Bank import";
 
-          {bankTransactions.length > 0 && (
-            <Text style={styles.caption}>
-              Imported {bankTransactions.length} fake bank transaction
-              {bankTransactions.length === 1 ? "" : "s"}.
-            </Text>
-          )}
-        </View>
-      </ScrollView>
+            return (
+              <View style={styles.activityItem}>
+                <View style={styles.activityDetails}>
+                  <Text style={styles.activityDescription}>
+                    {ledgerItem.description}
+                  </Text>
+
+                  <Text style={styles.activityMeta}>
+                    {ledgerItem.spentOn} · {sourceLabel}
+                    {ledgerItem.isPending ? " · Pending" : ""}
+                  </Text>
+                </View>
+
+                <View style={styles.activityRightColumn}>
+                  <Text style={styles.purchaseAmount}>
+                    {formatCurrency(ledgerItem.amount)}
+                  </Text>
+
+                  {ledgerItem.source === "manual" && (
+                    <Pressable
+                      hitSlop={12}
+                      onPress={() => {
+                        deleteSpendingEntry(ledgerItem.sourceId);
+                      }}
+                    >
+                      <Text style={styles.deleteText}>Delete</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            );
+          }}
+        />
+
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={openResetConfirmModal}
+        >
+          <Text style={styles.secondaryButtonText}>Reset</Text>
+        </Pressable>
+
+        <Pressable
+          style={[
+            styles.secondaryButton,
+            isBankTransactionsLoading && styles.disabledButton,
+          ]}
+          onPress={importFakeBankTransactions}
+          disabled={isBankTransactionsLoading}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {isBankTransactionsLoading
+              ? "Importing Fake Bank Transactions..."
+              : "Import Fake Bank Transactions"}
+          </Text>
+        </Pressable>
+
+        {bankTransactionsError !== null && (
+          <Text style={styles.caption}>{bankTransactionsError}</Text>
+        )}
+
+        {bankTransactions.length > 0 && (
+          <Text style={styles.caption}>
+            Imported {bankTransactions.length} fake bank transaction
+            {bankTransactions.length === 1 ? "" : "s"}.
+          </Text>
+        )}
+      </View>
+
       <Modal
         visible={isAddPurchaseModalVisible}
         transparent={false}
@@ -407,6 +443,7 @@ export default function HomeScreen() {
               <Text style={styles.modalTitle}>Add Purchase</Text>
 
               <Text style={styles.inputLabel}>Purchase Date</Text>
+
               <View style={styles.inputWrapper}>
                 <View style={styles.datePickerWrapper}>
                   <DateTimePicker
@@ -469,6 +506,7 @@ export default function HomeScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
       <Modal
         visible={isResetConfirmModalVisible}
         transparent={false}
@@ -498,6 +536,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
