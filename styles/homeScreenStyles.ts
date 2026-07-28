@@ -39,7 +39,53 @@ export const homeScreenStyles = StyleSheet.create({
     color: "#cfcfcf",
     fontSize: 18,
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 20,
+  },
+
+  dateNavigationRow: {
+    width: "100%",
+    maxWidth: 360,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+
+  dateArrowButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#333333",
+    borderRadius: 22,
+  },
+
+  dateArrowText: {
+    color: "#ffffff",
+    fontSize: 32,
+    lineHeight: 34,
+  },
+
+  dateButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+
+  dateText: {
+    color: "#ffffff",
+    fontSize: 17,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+
+  dateHint: {
+    color: "#777777",
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: "center",
   },
 
   amount: {
@@ -52,7 +98,7 @@ export const homeScreenStyles = StyleSheet.create({
   caption: {
     color: "#a8a8a8",
     fontSize: 18,
-    marginBottom: 40,
+    marginBottom: 24,
   },
 
   purchaseList: {
@@ -79,6 +125,7 @@ export const homeScreenStyles = StyleSheet.create({
 
   activityDetails: {
     flex: 1,
+    minWidth: 0,
     marginRight: 16,
   },
 
@@ -95,6 +142,7 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   activityRightColumn: {
+    flexShrink: 0,
     alignItems: "flex-end",
   },
 
@@ -188,6 +236,25 @@ export const homeScreenStyles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
+  },
+
+  datePickerModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+
+  datePickerModalCard: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: "#101010",
+    borderWidth: 1,
+    borderColor: "#333333",
+    borderRadius: 24,
+    padding: 20,
+    alignItems: "center",
   },
 
   modalOverlay: {

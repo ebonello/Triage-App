@@ -34,20 +34,35 @@ const MAX_DESCRIPTION_LENGTH = 25;
 export default function HomeScreen() {
   const [amountInput, setAmountInput] = useState("");
   const [descriptionInput, setDescriptionInput] = useState("");
+
   const [selectedSpentDate, setSelectedSpentDate] = useState(new Date());
+
+  const [selectedDashboardDate, setSelectedDashboardDate] = useState(
+    new Date(),
+  );
+
   const [spendingEntries, setSpendingEntries] = useState<SpendingEntry[]>([]);
+
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>(
     [],
   );
+
   const [isBankTransactionsLoading, setIsBankTransactionsLoading] =
     useState(false);
+
   const [bankTransactionsError, setBankTransactionsError] = useState<
     string | null
   >(null);
+
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
+
   const [isAddPurchaseModalVisible, setIsAddPurchaseModalVisible] =
     useState(false);
+
   const [isResetConfirmModalVisible, setIsResetConfirmModalVisible] =
+    useState(false);
+
+  const [isDashboardDatePickerVisible, setIsDashboardDatePickerVisible] =
     useState(false);
 
   /*
@@ -147,10 +162,12 @@ export default function HomeScreen() {
 
   // Validate that the amount is a real number and greater than zero
   const isValidAmount = Number.isFinite(spendingAmount) && spendingAmount > 0;
+
   const descriptionText = descriptionInput.trim();
 
   // Counts the characters currently typed into the description input
   const descriptionCharacterCount = descriptionInput.length;
+
   const isValidDescription =
     descriptionText.length > 0 &&
     descriptionCharacterCount <= MAX_DESCRIPTION_LENGTH;
@@ -183,15 +200,49 @@ export default function HomeScreen() {
     return secondItem.spentOn.localeCompare(firstItem.spentOn);
   });
 
-  const todayDate = getLocalDateStringFromTimestamp(new Date().toISOString());
+  /*
+    Convert the currently selected dashboard date into the same
+    YYYY-MM-DD format used by LedgerItem.spentOn.
+  */
+  const selectedDashboardDateString = getLocalDateStringFromTimestamp(
+    selectedDashboardDate.toISOString(),
+  );
 
-  const todaysLedgerItems = sortedLedgerItems.filter((ledgerItem) => {
-    return ledgerItem.spentOn === todayDate;
+  /*
+    Filter the complete ledger so the dashboard only displays
+    purchases from the selected date.
+  */
+  const selectedDateLedgerItems = sortedLedgerItems.filter((ledgerItem) => {
+    return ledgerItem.spentOn === selectedDashboardDateString;
   });
 
-  const spentToday = calculateLedgerItemTotal(todaysLedgerItems);
+  /*
+    Calculate the displayed total from the same items shown
+    in the purchase list.
+  */
+  const selectedDateTotal = calculateLedgerItemTotal(selectedDateLedgerItems);
 
-  const formattedSpentToday = formatCurrency(spentToday);
+  const formattedSelectedDateTotal = formatCurrency(selectedDateTotal);
+
+  /*
+    This text appears above the total.
+    Example: Monday, July 27, 2026
+  */
+  const formattedDashboardDate = selectedDashboardDate.toLocaleDateString(
+    "en-US",
+    {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    },
+  );
+
+  const todayDateString = getLocalDateStringFromTimestamp(
+    new Date().toISOString(),
+  );
+
+  const isViewingToday = selectedDashboardDateString === todayDateString;
 
   /*
     Main function for manually adding a spending entry from the UI.
@@ -279,7 +330,11 @@ export default function HomeScreen() {
   }
 
   function openAddPurchaseModal() {
-    setSelectedSpentDate(new Date());
+    /*
+      Default the purchase date to whichever date the user
+      is currently viewing on the dashboard.
+    */
+    setSelectedSpentDate(new Date(selectedDashboardDate));
     setIsAddPurchaseModalVisible(true);
   }
 
@@ -299,6 +354,43 @@ export default function HomeScreen() {
     setIsResetConfirmModalVisible(false);
   }
 
+  /*
+    Move the dashboard backward or forward by a specific
+    number of calendar days.
+  */
+  function changeDashboardDateByDays(numberOfDays: number) {
+    setSelectedDashboardDate((previousDate) => {
+      const updatedDate = new Date(previousDate);
+
+      updatedDate.setDate(updatedDate.getDate() + numberOfDays);
+
+      return updatedDate;
+    });
+  }
+
+  function showPreviousDashboardDate() {
+    changeDashboardDateByDays(-1);
+  }
+
+  function showNextDashboardDate() {
+    /*
+      The user cannot navigate beyond today.
+    */
+    if (isViewingToday) {
+      return;
+    }
+
+    changeDashboardDateByDays(1);
+  }
+
+  function openDashboardDatePicker() {
+    setIsDashboardDatePickerVisible(true);
+  }
+
+  function closeDashboardDatePicker() {
+    setIsDashboardDatePickerVisible(false);
+  }
+
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <View style={styles.container}>
@@ -306,15 +398,47 @@ export default function HomeScreen() {
 
         <Text style={styles.subtitle}>{"What's the damage?"}</Text>
 
-        <Text style={styles.amount}>{formattedSpentToday}</Text>
+        <View style={styles.dateNavigationRow}>
+          <Pressable
+            style={styles.dateArrowButton}
+            onPress={showPreviousDashboardDate}
+            accessibilityLabel="Show previous day"
+          >
+            <Text style={styles.dateArrowText}>‹</Text>
+          </Pressable>
 
-        <Text style={styles.caption}>Spent Today</Text>
+          <Pressable
+            style={styles.dateButton}
+            onPress={openDashboardDatePicker}
+            accessibilityLabel="Choose dashboard date"
+          >
+            <Text style={styles.dateText}>{formattedDashboardDate}</Text>
+
+            <Text style={styles.dateHint}>Tap to choose a date</Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.dateArrowButton,
+              isViewingToday && styles.disabledButton,
+            ]}
+            onPress={showNextDashboardDate}
+            disabled={isViewingToday}
+            accessibilityLabel="Show next day"
+          >
+            <Text style={styles.dateArrowText}>›</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.amount}>{formattedSelectedDateTotal}</Text>
+
+        <Text style={styles.caption}>Total Spending</Text>
 
         <Pressable style={styles.primaryButton} onPress={openAddPurchaseModal}>
           <Text style={styles.primaryButtonText}>+ Add Purchase</Text>
         </Pressable>
 
-        <Text style={styles.sectionTitle}>{"Today's Purchases"}</Text>
+        <Text style={styles.sectionTitle}>Purchases</Text>
 
         <FlatList
           style={[
@@ -332,7 +456,7 @@ export default function HomeScreen() {
               paddingRight: 36,
               paddingVertical: 8,
             },
-            todaysLedgerItems.length === 0
+            selectedDateLedgerItems.length === 0
               ? {
                   flexGrow: 1,
                   justifyContent: "center",
@@ -340,7 +464,7 @@ export default function HomeScreen() {
                 }
               : undefined,
           ]}
-          data={todaysLedgerItems}
+          data={selectedDateLedgerItems}
           keyExtractor={(ledgerItem) => ledgerItem.id}
           showsVerticalScrollIndicator={true}
           indicatorStyle="white"
@@ -352,7 +476,7 @@ export default function HomeScreen() {
                 textAlign: "center",
               }}
             >
-              No purchases recorded today.
+              No purchases recorded for this date.
             </Text>
           }
           renderItem={({ item: ledgerItem }) => {
@@ -428,6 +552,48 @@ export default function HomeScreen() {
       </View>
 
       <Modal
+        visible={isDashboardDatePickerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeDashboardDatePicker}
+      >
+        <View style={styles.datePickerModalOverlay}>
+          <View style={styles.datePickerModalCard}>
+            <Text style={styles.modalTitle}>Choose a Date</Text>
+
+            <DateTimePicker
+              value={selectedDashboardDate}
+              mode="date"
+              display={Platform.OS === "ios" ? "inline" : "default"}
+              maximumDate={new Date()}
+              onChange={(_event, selectedDate) => {
+                if (selectedDate !== undefined) {
+                  setSelectedDashboardDate(selectedDate);
+                }
+
+                /*
+                  Android uses a native date dialog, so close our
+                  wrapper modal after the user selects or dismisses it.
+                */
+                if (Platform.OS === "android") {
+                  closeDashboardDatePicker();
+                }
+              }}
+            />
+
+            {Platform.OS === "ios" && (
+              <Pressable
+                style={styles.primaryButton}
+                onPress={closeDashboardDatePicker}
+              >
+                <Text style={styles.primaryButtonText}>Done</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         visible={isAddPurchaseModalVisible}
         transparent={false}
         animationType="fade"
@@ -450,6 +616,7 @@ export default function HomeScreen() {
                     value={selectedSpentDate}
                     mode="date"
                     display={Platform.OS === "ios" ? "compact" : "default"}
+                    maximumDate={new Date()}
                     onChange={(_event, selectedDate) => {
                       if (selectedDate !== undefined) {
                         setSelectedSpentDate(selectedDate);
