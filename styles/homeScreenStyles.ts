@@ -28,18 +28,31 @@ export const homeScreenStyles = StyleSheet.create({
     padding: 24,
   },
 
+  headerCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: "#101010",
+    borderColor: "#222222",
+    borderWidth: 1,
+    borderRadius: 20,
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+
   appName: {
     color: "#ffffff",
     fontSize: 36,
     fontWeight: "700",
-    marginBottom: 12,
+    // marginBottom: 8,
   },
 
   subtitle: {
     color: "#cfcfcf",
     fontSize: 18,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 10,
   },
 
   dateNavigationRow: {
@@ -101,10 +114,66 @@ export const homeScreenStyles = StyleSheet.create({
     marginBottom: 24,
   },
 
+  purchaseListContainer: {
+    flex: 1,
+    width: "100%",
+    position: "relative",
+  },
+
   purchaseList: {
     flex: 1,
     width: "100%",
     marginTop: 12,
+    marginBottom: 12,
+  },
+
+  purchaseListBorder: {
+    borderWidth: 1,
+    borderColor: "#333333",
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+
+  purchaseListContent: {
+    flexGrow: 1,
+    paddingLeft: 14,
+    paddingRight: 48,
+    paddingVertical: 8,
+  },
+
+  emptyPurchaseListContent: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingLeft: 14,
+    paddingRight: 14,
+  },
+
+  emptyPurchaseListText: {
+    color: "#a8a8a8",
+    fontSize: 15,
+    textAlign: "center",
+  },
+
+  purchaseListExpandButton: {
+    position: "absolute",
+    top: 20,
+    right: 8,
+    zIndex: 1,
+    elevation: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#444444",
+  },
+
+  purchaseListExpandIcon: {
+    color: "#cfcfcf",
+    fontSize: 15,
+    fontWeight: "700",
   },
 
   sectionTitle: {
@@ -236,6 +305,68 @@ export const homeScreenStyles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
+  },
+
+  purchasesModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+
+  purchasesModalCard: {
+    width: "100%",
+    maxWidth: 420,
+    height: "50%",
+    minHeight: 280,
+    maxHeight: 460,
+    backgroundColor: "#101010",
+    borderWidth: 1,
+    borderColor: "#333333",
+    borderRadius: 24,
+    padding: 16,
+  },
+
+  purchasesModalHeader: {
+    minHeight: 36,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+
+  purchasesModalDate: {
+    color: "#cfcfcf",
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingHorizontal: 40,
+  },
+
+  purchasesModalCloseButton: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  purchasesModalCloseText: {
+    color: "#ffffff",
+    fontSize: 24,
+    fontWeight: "600",
+  },
+
+  purchasesModalList: {
+    flex: 1,
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#333333",
+    borderRadius: 16,
+    overflow: "hidden",
   },
 
   datePickerModalOverlay: {

@@ -65,6 +65,8 @@ export default function HomeScreen() {
   const [isDashboardDatePickerVisible, setIsDashboardDatePickerVisible] =
     useState(false);
 
+  const [isPurchasesModalVisible, setIsPurchasesModalVisible] = useState(false);
+
   /*
     useEffect runs AFTER the component renders.
 
@@ -391,12 +393,22 @@ export default function HomeScreen() {
     setIsDashboardDatePickerVisible(false);
   }
 
+  function openPurchasesModal() {
+    setIsPurchasesModalVisible(true);
+  }
+
+  function closePurchasesModal() {
+    setIsPurchasesModalVisible(false);
+  }
+
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <View style={styles.container}>
-        <Text style={styles.appName}>Triage</Text>
+        <View style={styles.headerCard}>
+          <Text style={styles.appName}>Triage</Text>
 
-        <Text style={styles.subtitle}>{"What's the damage?"}</Text>
+          <Text style={styles.subtitle}>{"What's the damage?"}</Text>
+        </View>
 
         <View style={styles.dateNavigationRow}>
           <Pressable
@@ -438,91 +450,72 @@ export default function HomeScreen() {
           <Text style={styles.primaryButtonText}>+ Add Purchase</Text>
         </Pressable>
 
-        <Text style={styles.sectionTitle}>Purchases</Text>
+        <View style={styles.purchaseListContainer}>
+          <FlatList
+            style={[styles.purchaseList, styles.purchaseListBorder]}
+            contentContainerStyle={[
+              styles.purchaseListContent,
+              selectedDateLedgerItems.length === 0
+                ? styles.emptyPurchaseListContent
+                : undefined,
+            ]}
+            data={selectedDateLedgerItems}
+            keyExtractor={(ledgerItem) => ledgerItem.id}
+            showsVerticalScrollIndicator={true}
+            indicatorStyle="white"
+            ListEmptyComponent={
+              <Text style={styles.emptyPurchaseListText}>
+                No purchases recorded for this date.
+              </Text>
+            }
+            renderItem={({ item: ledgerItem }) => {
+              const sourceLabel =
+                ledgerItem.source === "manual" ? "Manual" : "Bank import";
 
-        <FlatList
-          style={[
-            styles.purchaseList,
-            {
-              borderWidth: 1,
-              borderColor: "#333333",
-              borderRadius: 16,
-              overflow: "hidden",
-            },
-          ]}
-          contentContainerStyle={[
-            {
-              paddingLeft: 14,
-              paddingRight: 36,
-              paddingVertical: 8,
-            },
-            selectedDateLedgerItems.length === 0
-              ? {
-                  flexGrow: 1,
-                  justifyContent: "center",
-                  alignItems: "center",
-                }
-              : undefined,
-          ]}
-          data={selectedDateLedgerItems}
-          keyExtractor={(ledgerItem) => ledgerItem.id}
-          showsVerticalScrollIndicator={true}
-          indicatorStyle="white"
-          ListEmptyComponent={
-            <Text
-              style={{
-                color: "#a8a8a8",
-                fontSize: 15,
-                textAlign: "center",
-              }}
-            >
-              No purchases recorded for this date.
-            </Text>
-          }
-          renderItem={({ item: ledgerItem }) => {
-            const sourceLabel =
-              ledgerItem.source === "manual" ? "Manual" : "Bank import";
+              return (
+                <View style={styles.activityItem}>
+                  <View style={styles.activityDetails}>
+                    <Text style={styles.activityDescription}>
+                      {ledgerItem.description}
+                    </Text>
 
-            return (
-              <View style={styles.activityItem}>
-                <View style={styles.activityDetails}>
-                  <Text style={styles.activityDescription}>
-                    {ledgerItem.description}
-                  </Text>
+                    <Text style={styles.activityMeta}>
+                      {ledgerItem.spentOn} · {sourceLabel}
+                      {ledgerItem.isPending ? " · Pending" : ""}
+                    </Text>
+                  </View>
 
-                  <Text style={styles.activityMeta}>
-                    {ledgerItem.spentOn} · {sourceLabel}
-                    {ledgerItem.isPending ? " · Pending" : ""}
-                  </Text>
+                  <View style={styles.activityRightColumn}>
+                    <Text style={styles.purchaseAmount}>
+                      {formatCurrency(ledgerItem.amount)}
+                    </Text>
+
+                    {ledgerItem.source === "manual" && (
+                      <Pressable
+                        hitSlop={12}
+                        onPress={() => {
+                          deleteSpendingEntry(ledgerItem.sourceId);
+                        }}
+                      >
+                        <Text style={styles.deleteText}>Delete</Text>
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
+              );
+            }}
+          />
 
-                <View style={styles.activityRightColumn}>
-                  <Text style={styles.purchaseAmount}>
-                    {formatCurrency(ledgerItem.amount)}
-                  </Text>
-
-                  {ledgerItem.source === "manual" && (
-                    <Pressable
-                      hitSlop={12}
-                      onPress={() => {
-                        deleteSpendingEntry(ledgerItem.sourceId);
-                      }}
-                    >
-                      <Text style={styles.deleteText}>Delete</Text>
-                    </Pressable>
-                  )}
-                </View>
-              </View>
-            );
-          }}
-        />
-
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={openResetConfirmModal}
-        >
-          <Text style={styles.secondaryButtonText}>Reset</Text>
-        </Pressable>
+          <Pressable
+            style={styles.purchaseListExpandButton}
+            hitSlop={10}
+            onPress={openPurchasesModal}
+            accessibilityRole="button"
+            accessibilityLabel="Open purchases popup"
+          >
+            <Text style={styles.purchaseListExpandIcon}>↗</Text>
+          </Pressable>
+        </View>
 
         <Pressable
           style={[
@@ -539,6 +532,13 @@ export default function HomeScreen() {
           </Text>
         </Pressable>
 
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={openResetConfirmModal}
+        >
+          <Text style={styles.secondaryButtonText}>Reset</Text>
+        </Pressable>
+
         {bankTransactionsError !== null && (
           <Text style={styles.caption}>{bankTransactionsError}</Text>
         )}
@@ -550,6 +550,96 @@ export default function HomeScreen() {
           </Text>
         )}
       </View>
+
+      <Modal
+        visible={isPurchasesModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closePurchasesModal}
+      >
+        <Pressable
+          style={styles.purchasesModalOverlay}
+          onPress={closePurchasesModal}
+        >
+          <Pressable
+            style={styles.purchasesModalCard}
+            onPress={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <View style={styles.purchasesModalHeader}>
+              <Text style={styles.purchasesModalDate}>
+                {formattedDashboardDate}
+              </Text>
+
+              <Pressable
+                style={styles.purchasesModalCloseButton}
+                hitSlop={12}
+                onPress={closePurchasesModal}
+                accessibilityRole="button"
+                accessibilityLabel="Close purchases popup"
+              >
+                <Text style={styles.purchasesModalCloseText}>×</Text>
+              </Pressable>
+            </View>
+
+            <FlatList
+              style={styles.purchasesModalList}
+              contentContainerStyle={[
+                styles.purchaseListContent,
+                selectedDateLedgerItems.length === 0
+                  ? styles.emptyPurchaseListContent
+                  : undefined,
+              ]}
+              data={selectedDateLedgerItems}
+              keyExtractor={(ledgerItem) => ledgerItem.id}
+              showsVerticalScrollIndicator={true}
+              indicatorStyle="white"
+              ListEmptyComponent={
+                <Text style={styles.emptyPurchaseListText}>
+                  No purchases recorded for this date.
+                </Text>
+              }
+              renderItem={({ item: ledgerItem }) => {
+                const sourceLabel =
+                  ledgerItem.source === "manual" ? "Manual" : "Bank import";
+
+                return (
+                  <View style={styles.activityItem}>
+                    <View style={styles.activityDetails}>
+                      <Text style={styles.activityDescription}>
+                        {ledgerItem.description}
+                      </Text>
+
+                      <Text style={styles.activityMeta}>
+                        {ledgerItem.spentOn} · {sourceLabel}
+                        {ledgerItem.isPending ? " · Pending" : ""}
+                      </Text>
+                    </View>
+
+                    <View style={styles.activityRightColumn}>
+                      <Text style={styles.purchaseAmount}>
+                        {formatCurrency(ledgerItem.amount)}
+                      </Text>
+
+                      {ledgerItem.source === "manual" && (
+                        <Pressable
+                          hitSlop={12}
+                          onPress={() => {
+                            deleteSpendingEntry(ledgerItem.sourceId);
+                          }}
+                        >
+                          <Text style={styles.deleteText}>Delete</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </View>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={isDashboardDatePickerVisible}
