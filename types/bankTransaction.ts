@@ -21,10 +21,14 @@ export type BankTransaction = {
   personal_finance_category: PersonalFinanceCategory | null;
 };
 
+export type RemovedBankTransaction = {
+  transaction_id: string;
+};
+
 export type TransactionsSyncResponse = {
   added: BankTransaction[];
   modified: BankTransaction[];
-  removed: BankTransaction[];
+  removed: RemovedBankTransaction[];
   next_cursor: string;
   has_more: boolean;
 };

@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useEffect, useState } from "react";
 import {
@@ -14,18 +13,23 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchBankTransactionsSync } from "../../api/bankTransactionsApi";
+import { PurchaseListItem } from "../../components/PurchaseListItem";
+import {
+  loadBankTransactions,
+  loadSpendingEntries,
+  saveBankTransactions,
+  saveSpendingEntries,
+} from "../../storage/triageStorage";
 import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 import type { BankTransaction } from "../../types/bankTransaction";
+import type { LedgerItem } from "../../types/ledgerItem";
 import type { SpendingEntry } from "../../types/spendingEntry";
+import { getLocalDateStringFromTimestamp } from "../../utils/dateUtils";
 import { calculateLedgerItemTotal } from "../../utils/ledgerCalculations";
 import {
-  getLocalDateStringFromTimestamp,
   mapBankTransactionToLedgerItem,
   mapSpendingEntryToLedgerItem,
 } from "../../utils/ledgerItemMappers";
-
-// Storage key used by AsyncStorage to save the local ledger on the phone
-const SPENDING_ENTRIES_STORAGE_KEY = "triage:spendingEntries";
 
 // Max number of characters allowed in the description input
 const MAX_DESCRIPTION_LENGTH = 25;
@@ -70,30 +74,20 @@ export default function HomeScreen() {
   /*
     useEffect runs AFTER the component renders.
 
-    This useEffect loads saved spending entries from phone storage
-    when the HomeScreen first opens.
+    This useEffect loads both saved manual entries and saved bank
+    transactions when the HomeScreen first opens.
   */
   useEffect(() => {
-    async function loadSpendingEntries() {
+    async function loadStoredTriageData() {
       try {
-        const savedSpendingEntries = await AsyncStorage.getItem(
-          SPENDING_ENTRIES_STORAGE_KEY,
+        const [savedSpendingEntries, savedBankTransactions] = await Promise.all(
+          [loadSpendingEntries(), loadBankTransactions()],
         );
 
-        /*
-          AsyncStorage stores data as strings.
-
-          If savedSpendingEntries is not null, that means there was
-          previously saved data. We parse it back into an array.
-        */
-        if (savedSpendingEntries !== null) {
-          const parsedSpendingEntries: SpendingEntry[] =
-            JSON.parse(savedSpendingEntries);
-
-          setSpendingEntries(parsedSpendingEntries);
-        }
+        setSpendingEntries(savedSpendingEntries);
+        setBankTransactions(savedBankTransactions);
       } catch (error) {
-        console.log("Failed to load spending entries:", error);
+        console.log("Failed to load stored Triage data:", error);
       } finally {
         /*
           This runs whether the load succeeds or fails.
@@ -106,7 +100,7 @@ export default function HomeScreen() {
       }
     }
 
-    loadSpendingEntries();
+    loadStoredTriageData();
   }, []);
 
   /*
@@ -126,29 +120,41 @@ export default function HomeScreen() {
       return;
     }
 
-    async function saveSpendingEntries() {
+    async function persistSpendingEntries() {
       try {
-        /*
-          AsyncStorage can only store strings.
-
-          JSON.stringify converts the spendingEntries array into a string.
-        */
-        const spendingEntriesAsString = JSON.stringify(spendingEntries);
-
-        await AsyncStorage.setItem(
-          SPENDING_ENTRIES_STORAGE_KEY,
-          spendingEntriesAsString,
-        );
+        await saveSpendingEntries(spendingEntries);
       } catch (error) {
         console.log("Failed to save spending entries:", error);
       }
     }
 
-    saveSpendingEntries();
+    persistSpendingEntries();
   }, [spendingEntries, isStorageLoaded]);
 
   /*
-    Show a loading screen while AsyncStorage is checking for saved data.
+    This useEffect saves bankTransactions to local phone storage.
+
+    It follows the same loading guard used for manual entries so
+    the initial empty state cannot overwrite saved bank data.
+  */
+  useEffect(() => {
+    if (isStorageLoaded === false) {
+      return;
+    }
+
+    async function persistBankTransactions() {
+      try {
+        await saveBankTransactions(bankTransactions);
+      } catch (error) {
+        console.log("Failed to save bank transactions:", error);
+      }
+    }
+
+    persistBankTransactions();
+  }, [bankTransactions, isStorageLoaded]);
+
+  /*
+    Show a loading screen while local storage is checking for saved data.
 
     This prevents the main UI from briefly rendering with empty data.
   */
@@ -401,6 +407,16 @@ export default function HomeScreen() {
     setIsPurchasesModalVisible(false);
   }
 
+  function renderPurchaseListItem({ item: ledgerItem }: { item: LedgerItem }) {
+    return (
+      <PurchaseListItem
+        ledgerItem={ledgerItem}
+        formattedAmount={formatCurrency(ledgerItem.amount)}
+        onDeleteManualEntry={deleteSpendingEntry}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <View style={styles.container}>
@@ -468,42 +484,7 @@ export default function HomeScreen() {
                 No purchases recorded for this date.
               </Text>
             }
-            renderItem={({ item: ledgerItem }) => {
-              const sourceLabel =
-                ledgerItem.source === "manual" ? "Manual" : "Bank import";
-
-              return (
-                <View style={styles.activityItem}>
-                  <View style={styles.activityDetails}>
-                    <Text style={styles.activityDescription}>
-                      {ledgerItem.description}
-                    </Text>
-
-                    <Text style={styles.activityMeta}>
-                      {ledgerItem.spentOn} · {sourceLabel}
-                      {ledgerItem.isPending ? " · Pending" : ""}
-                    </Text>
-                  </View>
-
-                  <View style={styles.activityRightColumn}>
-                    <Text style={styles.purchaseAmount}>
-                      {formatCurrency(ledgerItem.amount)}
-                    </Text>
-
-                    {ledgerItem.source === "manual" && (
-                      <Pressable
-                        hitSlop={12}
-                        onPress={() => {
-                          deleteSpendingEntry(ledgerItem.sourceId);
-                        }}
-                      >
-                        <Text style={styles.deleteText}>Delete</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
-              );
-            }}
+            renderItem={renderPurchaseListItem}
           />
 
           <Pressable
@@ -600,42 +581,7 @@ export default function HomeScreen() {
                   No purchases recorded for this date.
                 </Text>
               }
-              renderItem={({ item: ledgerItem }) => {
-                const sourceLabel =
-                  ledgerItem.source === "manual" ? "Manual" : "Bank import";
-
-                return (
-                  <View style={styles.activityItem}>
-                    <View style={styles.activityDetails}>
-                      <Text style={styles.activityDescription}>
-                        {ledgerItem.description}
-                      </Text>
-
-                      <Text style={styles.activityMeta}>
-                        {ledgerItem.spentOn} · {sourceLabel}
-                        {ledgerItem.isPending ? " · Pending" : ""}
-                      </Text>
-                    </View>
-
-                    <View style={styles.activityRightColumn}>
-                      <Text style={styles.purchaseAmount}>
-                        {formatCurrency(ledgerItem.amount)}
-                      </Text>
-
-                      {ledgerItem.source === "manual" && (
-                        <Pressable
-                          hitSlop={12}
-                          onPress={() => {
-                            deleteSpendingEntry(ledgerItem.sourceId);
-                          }}
-                        >
-                          <Text style={styles.deleteText}>Delete</Text>
-                        </Pressable>
-                      )}
-                    </View>
-                  </View>
-                );
-              }}
+              renderItem={renderPurchaseListItem}
             />
           </Pressable>
         </Pressable>
@@ -776,8 +722,8 @@ export default function HomeScreen() {
             <Text style={styles.resetModalTitle}>Reset all spending?</Text>
 
             <Text style={styles.resetModalMessage}>
-              This will clear all saved spending entries from the app. This
-              cannot be undone.
+              This will clear all saved manual entries and bank transactions.
+              This cannot be undone.
             </Text>
 
             <Pressable style={styles.dangerButton} onPress={confirmResetTotal}>

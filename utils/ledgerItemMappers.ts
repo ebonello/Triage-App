@@ -1,16 +1,7 @@
 import type { BankTransaction } from "../types/bankTransaction";
 import type { LedgerItem } from "../types/ledgerItem";
 import type { SpendingEntry } from "../types/spendingEntry";
-
-export function getLocalDateStringFromTimestamp(timestamp: string) {
-  const date = new Date(timestamp);
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
+import { getLocalDateStringFromTimestamp } from "./dateUtils";
 
 export function mapSpendingEntryToLedgerItem(
   spendingEntry: SpendingEntry,

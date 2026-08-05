@@ -1,6 +1,6 @@
 export type SpendingEntry = {
   id: string;
-  source: "manual" | "bank";
+  source: "manual";
   amount: number;
   description: string;
   spentAt: string;

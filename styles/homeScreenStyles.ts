@@ -45,7 +45,6 @@ export const homeScreenStyles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 36,
     fontWeight: "700",
-    // marginBottom: 8,
   },
 
   subtitle: {
@@ -176,13 +175,6 @@ export const homeScreenStyles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  sectionTitle: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
-    margin: 10,
-  },
-
   activityItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -233,10 +225,6 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   datePickerWrapper: {
-    // backgroundColor: "#151515",
-    // borderColor: "#333333",
-    // borderWidth: 1,
-    // borderRadius: 16,
     paddingVertical: 8,
     paddingHorizontal: 12,
     width: "100%",

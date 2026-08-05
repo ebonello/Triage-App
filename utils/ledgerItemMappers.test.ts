@@ -1,20 +1,11 @@
 import type { BankTransaction } from "../types/bankTransaction";
 import type { SpendingEntry } from "../types/spendingEntry";
 import {
-  getLocalDateStringFromTimestamp,
   mapBankTransactionToLedgerItem,
   mapSpendingEntryToLedgerItem,
 } from "./ledgerItemMappers";
 
 describe("ledger item mappers", () => {
-  test("gets a local date string from a timestamp", () => {
-    const timestamp = new Date(2026, 5, 29, 14, 30, 0).toISOString();
-
-    const result = getLocalDateStringFromTimestamp(timestamp);
-
-    expect(result).toBe("2026-06-29");
-  });
-
   test("maps a manual spending entry to a ledger item", () => {
     const spentAt = new Date(2026, 5, 29, 14, 30, 0).toISOString();
 
