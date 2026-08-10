@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchBankTransactionsSync } from "../../api/bankTransactionsApi";
 import { PurchaseListItem } from "../../components/PurchaseListItem";
+import { ReconciliationModal } from "../../components/ReconciliationModal";
 import {
   loadBankTransactions,
   loadSpendingEntries,
@@ -24,12 +25,17 @@ import { homeScreenStyles as styles } from "../../styles/homeScreenStyles";
 import type { BankTransaction } from "../../types/bankTransaction";
 import type { LedgerItem } from "../../types/ledgerItem";
 import type { SpendingEntry } from "../../types/spendingEntry";
+import { applyBankTransactionSync } from "../../utils/bankTransactionSync";
 import { getLocalDateStringFromTimestamp } from "../../utils/dateUtils";
 import { calculateLedgerItemTotal } from "../../utils/ledgerCalculations";
 import {
   mapBankTransactionToLedgerItem,
   mapSpendingEntryToLedgerItem,
 } from "../../utils/ledgerItemMappers";
+import {
+  findReconciliationCandidates,
+  type ReconciliationCandidate,
+} from "../../utils/reconciliation";
 
 // Max number of characters allowed in the description input
 const MAX_DESCRIPTION_LENGTH = 25;
@@ -71,6 +77,11 @@ export default function HomeScreen() {
 
   const [isPurchasesModalVisible, setIsPurchasesModalVisible] = useState(false);
 
+  const [reconciliationCandidates, setReconciliationCandidates] = useState<
+    ReconciliationCandidate[]
+  >([]);
+
+  const currentReconciliationCandidate = reconciliationCandidates[0] ?? null;
   /*
     useEffect runs AFTER the component renders.
 
@@ -194,7 +205,15 @@ export default function HomeScreen() {
     });
   }
 
-  const manualLedgerItems = spendingEntries.map((spendingEntry) => {
+  /*
+    Reconciled manual entries remain in storage for history, but they
+    should no longer appear in the ledger or count toward the total.
+  */
+  const unreconciledSpendingEntries = spendingEntries.filter(
+    (spendingEntry) => spendingEntry.reconciledBankTransactionId === undefined,
+  );
+
+  const manualLedgerItems = unreconciledSpendingEntries.map((spendingEntry) => {
     return mapSpendingEntryToLedgerItem(spendingEntry);
   });
 
@@ -296,6 +315,7 @@ export default function HomeScreen() {
     setDescriptionInput("");
     setSpendingEntries([]);
     setBankTransactions([]);
+    setReconciliationCandidates([]);
     closeResetConfirmModal();
   }
 
@@ -306,12 +326,52 @@ export default function HomeScreen() {
     try {
       const transactionsSyncResponse = await fetchBankTransactionsSync();
 
-      setBankTransactions(transactionsSyncResponse.added);
+      /*
+        Only ask about bank transactions that were not already stored
+        before this import. This prevents the same reconciliation prompt
+        from appearing again when the fake server repeats an "added" record.
+      */
+      const existingBankTransactionIds = new Set(
+        bankTransactions.map(
+          (bankTransaction) => bankTransaction.transaction_id,
+        ),
+      );
+
+      const genuinelyNewBankTransactions =
+        transactionsSyncResponse.added.filter(
+          (bankTransaction) =>
+            existingBankTransactionIds.has(bankTransaction.transaction_id) ===
+            false,
+        );
+
+      /*
+        Merge the complete sync response into the bank transactions we
+        already have instead of replacing the entire collection.
+      */
+      const synchronizedBankTransactions = applyBankTransactionSync(
+        bankTransactions,
+        transactionsSyncResponse,
+      );
+
+      setBankTransactions(synchronizedBankTransactions);
+
+      /*
+        Look for likely manual-entry matches only among the genuinely
+        new bank transactions from this import.
+      */
+      const candidates = findReconciliationCandidates(
+        spendingEntries,
+        genuinelyNewBankTransactions,
+      );
+
+      setReconciliationCandidates(candidates);
 
       console.log(
-        "Imported fake bank transactions:",
-        transactionsSyncResponse.added,
+        "Synchronized fake bank transactions:",
+        transactionsSyncResponse,
       );
+
+      console.log("Reconciliation candidates:", candidates);
     } catch (error) {
       console.log("Failed to import bank transactions:", error);
 
@@ -321,6 +381,46 @@ export default function HomeScreen() {
     } finally {
       setIsBankTransactionsLoading(false);
     }
+  }
+
+  function showNextReconciliationCandidate() {
+    setReconciliationCandidates((previousCandidates) =>
+      previousCandidates.slice(1),
+    );
+  }
+
+  function replaceManualEntryWithBankTransaction() {
+    if (currentReconciliationCandidate === null) {
+      return;
+    }
+
+    const manualEntryId = currentReconciliationCandidate.spendingEntry.id;
+
+    const bankTransactionId =
+      currentReconciliationCandidate.bankTransaction.transaction_id;
+
+    /*
+      Keep the manual entry in storage for history, but link it to the
+      bank transaction so it stops displaying and stops being counted.
+    */
+    setSpendingEntries((previousSpendingEntries) =>
+      previousSpendingEntries.map((spendingEntry) => {
+        if (spendingEntry.id !== manualEntryId) {
+          return spendingEntry;
+        }
+
+        return {
+          ...spendingEntry,
+          reconciledBankTransactionId: bankTransactionId,
+        };
+      }),
+    );
+
+    showNextReconciliationCandidate();
+  }
+
+  function keepBothReconciliationEntries() {
+    showNextReconciliationCandidate();
   }
 
   /*
@@ -709,6 +809,12 @@ export default function HomeScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <ReconciliationModal
+        candidate={currentReconciliationCandidate}
+        onReplaceManualEntry={replaceManualEntryWithBankTransaction}
+        onKeepBoth={keepBothReconciliationEntries}
+      />
 
       <Modal
         visible={isResetConfirmModalVisible}

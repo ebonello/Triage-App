@@ -5,4 +5,5 @@ export type SpendingEntry = {
   description: string;
   spentAt: string;
   createdAt: string;
+  reconciledBankTransactionId?: string;
 };
