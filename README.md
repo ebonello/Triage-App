@@ -1,65 +1,309 @@
-**TRIAGE**
+# Triage
 
-This is first an foremost a vehicle to learn a modern development workflow for a mobile-first app using a modern stack.
+Triage is a React Native spending-tracking application designed to give users a simple view of how much they have spent on a given day.
 
-Triage is a mobile spending-tracking app designed to help users monitor their daily spending in real time. The main purpose of the app is to give users a quick, simple view of how much they have spent today, while also supporting longer-term spending history, weekly totals, and future budget breakdowns.
-The app allows users to manually enter purchases with an amount, description, and purchase date.
+The application supports both manually entered purchases and imported bank transactions. Because bank transactions may not appear immediately, users can enter purchases manually and later reconcile those entries with imported bank data to prevent the same purchase from being counted twice.
 
-These entries are saved locally so users can track spending immediately, even before bank transaction data becomes available. Each entry stores both the date the purchase occurred and the date the record was created, which supports backdated entries and more accurate daily totals.
+Triage is currently under active development. Bank data is provided by a local mock API while the application architecture and persistence layer are being developed.
 
-The long-term goal is to support imported banking transactions from multiple accounts using a Plaid-style integration. Manual entries and bank-imported transactions will remain separate data sources so they can eventually be reconciled and matched without double-counting the same purchase.
+## Current Features
 
-The app is being built with React Native and Expo for the mobile front end, TypeScript for typed data models, AsyncStorage for local persistence, and Jest for testing core business logic. A local Express backend is being used during development to simulate Plaid-style transaction sync data before connecting to a real banking API.
+- Add manual spending entries with an amount, description, and purchase date.
+- Navigate between daily spending views.
+- Select a date using a calendar picker.
+- Display purchases associated with the selected date.
+- Calculate daily spending totals from the displayed ledger.
+- Persist manual spending entries locally using AsyncStorage.
+- Import mock bank transactions from a local Express API.
+- Persist imported bank transactions locally.
+- Synchronize imported bank transactions using unique transaction IDs.
+- Handle added, modified, and removed bank transactions.
+- Detect likely matches between manual entries and newly imported bank transactions.
+- Prompt the user to either replace a manual entry with the matching bank transaction or keep both records.
+- Preserve reconciled manual records for historical purposes while excluding them from displayed spending totals.
+- Display pending bank transactions.
+- Reset locally stored spending data.
+- Run automated tests covering date utilities, ledger calculations, data mapping, storage, reconciliation, and bank synchronization.
 
-At completion, the app is intended to provide a simple daily spending dashboard, purchase history by date, imported banking transaction support, and reconciliation logic between manual and bank-provided spending data.
+## Technology Stack
 
-[Current Demo](https://drive.google.com/file/d/1sXNw5k5RULdPGUX8w6_VZQI9-2mEQaeJ/view?usp=sharing)
+### Mobile Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+- React Native
+- Expo
+- TypeScript
+- React Hooks
+- AsyncStorage
+- React Native Community DateTimePicker
 
-## Get started
+### Backend
 
-1. Install dependencies
+- Node.js
+- Express
+- CORS
+- Local mock bank-transaction API
 
-   ```bash
-   npm install
-   ```
+### Testing
 
-2. Start the app
+- Jest
+- TypeScript compiler checks
 
-   ```bash
-   npx expo start
-   ```
+## Application Architecture
 
-In the output, you'll find options to open the app in a
+Triage currently maintains two primary sources of spending data:
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+1. **Manual spending entries**, represented by `SpendingEntry`.
+2. **Imported bank transactions**, represented by `BankTransaction`.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+These source models intentionally remain separate because they contain different information and originate from different systems.
 
-## Get a fresh project
+Before displaying the data, Triage converts both sources into a normalized `LedgerItem` model.
 
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+Manual SpendingEntry[]
+          │
+          ├── Reconciliation
+          │
+          ▼
+Unreconciled Manual Entries
+          │
+          │ map
+          ▼
+      LedgerItem[]
+          │
+          │
+          ├──────────────┐
+                         │
+BankTransaction[]        │
+        │                │
+        │ map            │
+        ▼                │
+   LedgerItem[] ─────────┘
+        │
+        ▼
+Combined Ledger
+        │
+        ├── Sort
+        ├── Filter by selected date
+        └── Calculate total
+        │
+        ▼
+       UI
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Bank Synchronization
 
-## Learn more
+Imported bank data is synchronized with transactions already stored by the application.
 
-To learn more about developing your project with Expo, look at the following resources:
+The synchronization process handles:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `added` transactions
+- `modified` transactions
+- `removed` transactions
+- Duplicate transaction IDs
 
-## Join the community
+A bank transaction's `transaction_id` is used as its unique identity.
 
-Join our community of developers creating universal apps.
+### Reconciliation
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Reconciliation addresses a different problem from bank synchronization.
+
+**Synchronization** compares incoming bank data with bank data already stored by the application.
+
+**Reconciliation** compares newly imported bank transactions with manually entered purchases.
+
+Triage currently considers a manual entry a possible match when:
+
+- The monetary amounts match exactly.
+- The purchase dates are within three days of one another.
+
+Description similarity may be used to choose the strongest candidate when multiple manual entries qualify.
+
+The application does not automatically reconcile transactions. The user is prompted to choose between:
+
+- **Replace Manual Entry**
+- **Keep Both**
+
+When a manual entry is replaced, the original record is preserved and its `reconciledBankTransactionId` property references the corresponding bank transaction.
+
+Reconciled manual entries are excluded from the displayed ledger so the same purchase is not counted twice.
+
+## Persistence
+
+Triage currently uses AsyncStorage for local persistence.
+
+The application stores:
+
+- Manual `SpendingEntry` records
+- Imported `BankTransaction` records
+- Reconciliation information stored on manual entries
+
+The final `LedgerItem` collection and daily spending totals are **not** independently persisted. They are derived from the underlying transaction data.
+
+Long term, the project is intended to move persistent application data to a server-side relational database while AsyncStorage may remain useful as a local cache.
+
+## Project Structure
+
+```text
+TRIAGE-APP/
+├── api/
+│   └── bankTransactionsApi.ts
+│
+├── app/
+│   └── (tabs)/
+│       └── index.tsx
+│
+├── components/
+│   ├── PurchaseListItem.tsx
+│   └── ReconciliationModal.tsx
+│
+├── server/
+│   └── server.js
+│
+├── storage/
+│   ├── triageStorage.ts
+│   └── triageStorage.test.ts
+│
+├── styles/
+│   └── homeScreenStyles.ts
+│
+├── types/
+│   ├── bankTransaction.ts
+│   ├── ledgerItem.ts
+│   └── spendingEntry.ts
+│
+├── utils/
+│   ├── bankTransactionSync.ts
+│   ├── bankTransactionSync.test.ts
+│   ├── dateUtils.ts
+│   ├── dateUtils.test.ts
+│   ├── ledgerCalculations.ts
+│   ├── ledgerCalculations.test.ts
+│   ├── ledgerItemMappers.ts
+│   ├── ledgerItemMappers.test.ts
+│   ├── reconciliation.ts
+│   └── reconciliation.test.ts
+│
+├── package.json
+└── README.md
+```
+
+### Major Responsibilities
+
+- `app/` — screen state, user interaction, and application orchestration.
+- `api/` — communication between the React Native client and backend.
+- `components/` — reusable UI components.
+- `storage/` — local persistence through AsyncStorage.
+- `types/` — TypeScript definitions for application data.
+- `utils/` — reusable business logic including mapping, calculations, synchronization, reconciliation, and date handling.
+- `server/` — local Express backend and mock bank API.
+- `styles/` — centralized React Native presentation styles.
+
+## Running the Application
+
+Install the client dependencies from the project root:
+
+```bash
+npm install
+```
+
+Start the Expo development server:
+
+```bash
+npx expo start
+```
+
+The mobile application currently expects the local Express server to be running for mock bank imports.
+
+From the `server` directory:
+
+```bash
+cd server
+npm install
+node server.js
+```
+
+The mock server currently exposes a transaction synchronization endpoint used to simulate a future banking integration.
+
+> The API base URL is currently configured for local development and may need to be updated to match the development machine's local network address.
+
+## Testing
+
+Run the automated test suite:
+
+```bash
+npm run test:once
+```
+
+Run a TypeScript compilation check without generating build output:
+
+```bash
+npx tsc --noEmit
+```
+
+Current automated test coverage includes:
+
+- Date conversion utilities
+- Ledger-item mapping
+- Ledger total calculations
+- AsyncStorage persistence
+- Reconciliation candidate detection
+- Bank transaction synchronization
+- Duplicate prevention
+- Added, modified, and removed bank transaction handling
+- Immutability of synchronization inputs
+
+## Current Development Status
+
+The core spending workflow is functional:
+
+```text
+Manual Entry
+     +
+Mock Bank Import
+     +
+Bank Synchronization
+     +
+Manual/Bank Reconciliation
+     +
+Normalized Ledger
+     +
+Daily Total
+```
+
+The application is still a development prototype and does not currently connect to a real financial institution.
+
+## Planned Development
+
+Upcoming work includes:
+
+- Introduce a relational database for server-side persistence.
+- Move manual spending entries from local-only persistence to the backend.
+- Persist bank transactions server-side.
+- Persist reconciliation relationships in the database.
+- Add API endpoints for creating, reading, updating, and deleting spending data.
+- Introduce user accounts and authentication.
+- Add weekly and monthly spending views.
+- Add category-based spending summaries.
+- Add transaction search and filtering.
+- Add reconciliation history and undo functionality.
+- Replace mock bank data with a real bank integration.
+- Add production configuration, security, and deployment infrastructure.
+
+## Data Design Direction
+
+The planned database layer will store underlying financial records rather than calculated display values.
+
+For example, monetary values are expected to be stored as integer cents rather than floating-point dollar values:
+
+```text
+$14.25 → 1425
+```
+
+Daily, weekly, and monthly totals can then be calculated from the underlying records instead of being stored as separate sources of truth.
+
+The initial database design is currently being planned around a relational SQL model.
+
+## Project Status
+
+Triage is an actively developed project focused on building a maintainable foundation for manual spending tracking, transaction synchronization, reconciliation, and eventually database-backed financial data.
